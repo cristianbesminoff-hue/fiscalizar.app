@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fiscalização</title>
+<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b5cad">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:#f2f4f7;color:#1a1d21}
+header{position:sticky;top:0;z-index:5;background:#0b5cad;color:#fff;padding:8px}
+.r{display:flex;gap:6px;margin-bottom:6px}.r>*{flex:1;min-width:0}
+input,select,textarea{font:inherit;padding:9px;border:1px solid #ccd;border-radius:8px;width:100%}
+button{font:inherit;border:0;border-radius:8px;padding:10px;background:#0b5cad;color:#fff}
+button.s{background:#e3e8ef;color:#1a1d21}button.g{background:#1a8a4a}button.o{background:#d9822b}
+.tabs{display:flex;gap:4px}.tabs button{background:#ffffff33;flex:1;padding:8px 2px;font-size:13px}.tabs button.on{background:#fff;color:#0b5cad;font-weight:600}
+main{padding:8px;padding-bottom:40px}.c{background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0002}
+.c b{display:block}.m{color:#556;font-size:13px;margin:2px 0}.a{display:flex;gap:6px;margin-top:8px}.a button{flex:1;padding:9px 4px;font-size:14px}
+.tag{display:inline-block;background:#e3e8ef;border-radius:6px;padding:1px 6px;font-size:12px;margin-right:4px}
+#map{height:calc(100vh - 120px);border-radius:10px;display:none}
+#m{position:fixed;inset:0;background:#0007;display:none;z-index:2000;overflow:auto}
+#m>div{background:#f2f4f7;margin:16px 8px;border-radius:12px;padding:12px}
+.ch{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}.ch button{background:#e3e8ef;color:#1a1d21;padding:8px 10px;font-size:13px}
+.ch button.on{background:#1a8a4a;color:#fff}.ch button.on.bad{background:#c0392b}
+.f{display:flex;justify-content:space-between;gap:8px;padding:8px;background:#fff;border-radius:8px;margin-bottom:4px;font-size:14px}
+.f span:last-child{color:#0b5cad;white-space:nowrap}h3{margin:12px 0 4px}.s-pend{border-left:6px solid #0b5cad}.s-exec{border-left:6px solid #e67e22;background:#fff1e0}.s-pen{border-left:6px solid #c0392b}.s-ok{border-left:6px solid #1a8a4a}.f b{user-select:all;-webkit-user-select:all;font-size:17px}.f{padding:14px 10px}
+</style></head><body>
+<header>
+ <div class="r"><button class="s" onclick="$('#file').click()">📂 Importar KML</button>
+ <select id="cf" onchange="render()"></select></div>
+ <div class="r"><input id="q" placeholder="Buscar nome, protocolo, endereço" oninput="render()"></div>
+ <div class="tabs" id="tabs"></div>
+ <input type="file" id="file" multiple hidden>
+</header>
+<main><div id="list"></div><div id="map"></div></main>
+<div id="m"><div id="mc"></div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const tc=s=>s.toLowerCase().replace(/(^|\s)\S/g,m=>m.toUpperCase());
+let S;try{S=JSON.parse(localStorage.getItem('fp'))}catch(e){}
+S=S||{p:[],v:{},c:{},u:''};S.st=S.st||{};for(const k in S.v)S.st[k]=S.st[k]||'ok';S.v={};
+const st=id=>S.st[id]||'pend';
+const META=220,mk=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
+S.m=S.m||mk();
+if(!S.cnt){S.cnt={};for(const k in S.st)if(S.st[k]==='ok'||S.st[k]==='pen')S.cnt[k]=S.st[k]}
+const save=()=>{try{localStorage.setItem('fp',JSON.stringify(S))}catch(e){}};
+let tab='pend',map,layer,pos=null,cur={},curId=null;
+const TABS=[['pend','Pendentes'],['map','Mapa'],['rota','Rota']];
+const A='APROVADO',R='REPROVADO';
+const F=[['vist','6. Vistoria',['FTTH','FTTB','FTTA','FTTX']],
+['apr','7. APR',['Trabalho em altura.','Não ha atividade de risco.','Outra']],
+['ca','8. Organização da C.A',[A,R]],['drop','11. Lançamento do drop',[A,R]],
+['poste','13. Ancoragem no poste',[A,R,'N/A (FTTA)']],['pim','15. Ancoragem no pimentão',[A,R,'N/A (FTTA/subterraneo)']],
+['acab','17. Acabamento do drop',[A,R]],['dg','19. Organização do DG',[A,R,'N/A']],
+['fin','21. Situação final',[A,'PENDENCIA-REFAZER']]];
+const nav=p=>`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
+const dist=(a,b)=>{const k=Math.PI/180,x=(b.lng-a.lng)*k*Math.cos((a.lat+b.lat)*k/2),y=(b.lat-a.lat)*k;return Math.hypot(x,y)*6371};
+
+$('#file').onchange=async e=>{
+ const fs=[...e.target.files];if(!fs.length)return;
+ const old=new Map(S.p.map(p=>[p.id,p]));let n=0;
+ for(const f of fs){
+  const x=new DOMParser().parseFromString(await f.text(),'text/xml');
+  for(const pm of x.getElementsByTagName('Placemark')){
+   const d={};for(const el of pm.getElementsByTagName('Data'))d[el.getAttribute('name')]=(el.getElementsByTagName('value')[0]||{}).textContent||'';
+   const co=(pm.getElementsByTagName('coordinates')[0]||{}).textContent;if(!co||!d.Protocolo)continue;
+   const [lng,lat]=co.trim().split(',').map(Number);
+   const cp=(d.Cidade||'').split('-');const uf=cp.length>1?cp.pop():'';
+   const nm=pm.getElementsByTagName('n')[0]||pm.getElementsByTagName('name')[0];
+   const p={id:d.Protocolo,nome:nm?nm.textContent:'',emp:d['Empresa'],tec:d['Técnico'],cid:tc(cp.join('-').trim()),uf,end:d['Endereço'],serv:d['Serviço'],data:d['Data Finalizado'],lat,lng};
+   if(!old.has(p.id))n++;old.set(p.id,p);
+  }
+ }
+ S.p=[...old.values()];save();fill();render();e.target.value='';
+ alert(n+' protocolos novos. Total: '+S.p.length);
+};
+
+function fill(){
+ const cs=[...new Set(S.p.map(p=>p.cid))].sort(),v=$('#cf').value;
+ $('#cf').innerHTML='<option value="">Todas as cidades</option>'+cs.map(c=>`<option ${c===v?'selected':''}>${esc(c)}</option>`).join('');
+}
+function items(m){
+ const c=$('#cf').value,q=$('#q').value.toLowerCase();
+ return S.p.filter(p=>(m==='todo'?(st(p.id)==='pend'||st(p.id)==='exec'):m==='done'?(st(p.id)==='ok'||st(p.id)==='pen'):st(p.id)!=='ok')&&(!c||p.cid===c)&&(!q||(p.nome+p.id+p.end).toLowerCase().includes(q)))
+  .sort((a,b)=>a.cid.localeCompare(b.cid)||a.nome.localeCompare(b.nome));
+}
+const LB={pend:'',exec:'⏳ em execução',pen:'⚠ pendência',ok:'✔ ok'};
+function card(p){
+ const t=st(p.id);
+ return `<div class="c s-${t}" data-id="${p.id}"><b>${esc(p.nome)}</b>
+ <div class="m">${esc(p.end)} · ${esc(p.cid)}-${esc(p.uf)}</div>
+ <div class="m"><span class="tag">${esc(p.serv)}</span><span class="tag">${esc(p.id)}</span>${LB[t]?`<span class="tag">${LB[t]}</span>`:''}</div>
+ <div class="a"><button data-a="nav">🧭 Navegar</button>${t==='ok'?'<button class="s" data-a="undo">Desfazer</button>':'<button class="o" data-a="run">▶ Executar</button>'}</div></div>`;
+}
+function gauge(){
+ const v=Object.values(S.cnt),n=v.length,ok=v.filter(x=>x==='ok').length,pen=n-ok,pc=Math.min(n/META,1),a=-90+180*pc;
+ return `<div class="c" style="display:flex;align-items:center;gap:10px"><svg viewBox="0 0 120 72" width="130"><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="#e3e8ef" stroke-width="10" stroke-linecap="round"/><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="${pc>=1?'#1a8a4a':'#e67e22'}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="${pc*100} 100"/><g transform="rotate(${a} 60 62)"><line x1="60" y1="62" x2="60" y2="22" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/></g><circle cx="60" cy="62" r="5" fill="#333"/><text x="4" y="71" font-size="9">E</text><text x="108" y="71" font-size="9">F</text></svg>
+ <div><div style="font-size:28px;font-weight:700">⛽ ${n}<span style="font-size:16px;color:#556"> / ${META}</span></div><div class="m">${ok} OK · ${pen} pendência${pen==1?'':'s'}<br>faltam ${Math.max(META-n,0)}</div></div></div>`;
+}
+const pe=t=>String(t).replace(/[\\()]/g,'\\$&');
+function mkpdf(title,sub,rows){
+ const PER=90,pages=[];
+ for(let i=0;i<rows.length||!pages.length;i+=PER){
+  let c='BT /F1 14 Tf 50 805 Td ('+pe(title)+') Tj ET\nBT /F1 10 Tf 50 788 Td ('+pe(sub+' - pag. '+(pages.length+1))+') Tj ET\n';
+  rows.slice(i,i+PER).forEach((r,k)=>{c+='BT /F1 10 Tf '+(50+(k<45?0:260))+' '+(765-(k%45)*15)+' Td ('+pe(r)+') Tj ET\n'});
+  pages.push(c);
+ }
+ const o=['<</Type/Catalog/Pages 2 0 R>>',null,'<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>'],kids=[];
+ pages.forEach((c,i)=>{const n=4+i*2;kids.push(n+' 0 R');o[n-1]='<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 3 0 R>>>>/Contents '+(n+1)+' 0 R>>';o[n]='<</Length '+c.length+'>>\nstream\n'+c+'endstream'});
+ o[1]='<</Type/Pages/Kids['+kids.join(' ')+']/Count '+pages.length+'>>';
+ let out='%PDF-1.4\n';const off=[];
+ o.forEach((b,i)=>{off.push(out.length);out+=(i+1)+' 0 obj\n'+b+'\nendobj\n'});
+ const x=out.length;
+ out+='xref\n0 '+(o.length+1)+'\n0000000000 65535 f \n'+off.map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<</Size '+(o.length+1)+'/Root 1 0 R>>\nstartxref\n'+x+'\n%%EOF';
+ const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
+ return new Blob([u],{type:'application/pdf'});
+}
+function pdfMes(){
+ const e=Object.entries(S.cnt);if(!e.length){alert('Nenhum protocolo fiscalizado neste mês ainda.');return}
+ const ok=e.filter(x=>x[1]==='ok').length,pen=e.length-ok;
+ const b=mkpdf('Protocolos fiscalizados - '+S.m,'Total: '+e.length+' protocolos',e.map(([id],i)=>(i+1)+'.  '+id+'   '+((S.dt||{})[id]||'-')));
+ const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fiscalizacao-'+S.m+'.pdf';document.body.appendChild(a);a.click();a.remove();
+}
+function zerar(){
+ if(!confirm('Zerar o aplicativo? Apaga TODOS os protocolos, marcações, contador e histórico. O link do Forms continua salvo.'))return;
+ if(!confirm('Tem certeza? Não dá pra desfazer.'))return;
+ const u=S.u;S={p:[],v:{},c:{},u,st:{},cnt:{},dt:{},h:{},m:mk()};
+ $('#m').style.display='none';save();fill();render();
+}
+function virar(){
+ const v=Object.values(S.cnt),ok=v.filter(x=>x==='ok').length,pen=v.length-ok;
+ if(!confirm(`Virar o mês? Fecha ${S.m} com ${ok} OK e ${pen} pendência(s). Os OK saem da lista; as pendências e o que não foi feito continuam. O PDF do mês será baixado.`))return;
+ pdfMes();
+ S.h=S.h||{};S.h[S.m]={ok,pen};
+ S.p=S.p.filter(p=>st(p.id)!=='ok');for(const k in S.st)if(S.st[k]==='ok')delete S.st[k];
+ S.cnt={};S.dt={};S.m=mk();S.last=null;save();fill();render();
+}
+function render(){
+ $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="${k===tab?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('');
+ const L=$('#list'),M=$('#map');
+ M.style.display=tab==='map'?'block':'none';L.style.display=tab==='map'?'none':'block';
+ if(!S.p.length){L.innerHTML='<div class="c">Toque em <b>Importar KML</b> para carregar os protocolos.</div>';return}
+ if(tab==='pend'){
+  const it=items('todo'),dn=items('done');
+  const bn=S.m!==mk()?`<div class="c s-exec"><b>📅 Virou o mês</b><div class="m">Feche ${S.m} e comece de novo.</div><div class="a"><button class="o" onclick="virar()">Virar o mês</button></div></div>`:'';
+  const ok=dn.filter(p=>st(p.id)==='ok').length,pen=dn.length-ok;
+  const hist=Object.entries(S.h||{}).sort().reverse().map(([k,v])=>k+': '+v.ok+' OK, '+v.pen+' pend.').join('<br>');
+  L.innerHTML=bn+gauge()+`<div class="m" style="margin:2px 4px 8px">${it.length} a fazer</div>`+(it.map(card).join('')||'<div class="c">Nada a fazer. 🎉</div>')+
+   `<details class="c"><summary><b>Concluídos</b> · ${ok} OK · ${pen} pendência${pen==1?'':'s'}</summary><div style="margin-top:8px">${dn.map(card).join('')}</div></details>`+
+   `<div class="c"><div class="a"><button class="s" onclick="pdfMes()">📄 PDF do mês</button><button class="s" onclick="virar()">📅 Virar o mês</button></div><div class="a"><button style="background:#c0392b" onclick="zerar()">🗑 Zerar aplicativo</button></div><div class="m" style="margin-top:6px">${hist}</div></div>`;
+ }else if(tab==='map')drawMap();
+ else drawRota();
+}
+function drawMap(){
+ if(typeof L==='undefined'){$('#map').innerHTML='<div class="c">Mapa precisa de internet.</div>';return}
+ if(!map){map=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map)}
+ layer.clearLayers();const it=items();
+ it.forEach(p=>L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillOpacity:.95,fillColor:({exec:'#e67e22',pen:'#c0392b'})[st(p.id)]||'#0b5cad'})
+  .bindPopup(`<b>${esc(p.nome)}</b><br>${esc(p.end)}<br><a href="${nav(p)}" target="_blank">🧭 Navegar</a>`).addTo(layer));
+ setTimeout(()=>{map.invalidateSize();if(it.length)map.fitBounds(it.map(p=>[p.lat,p.lng]),{padding:[30,30]})},50);
+}
+function drawRota(){
+ const c=$('#cf').value,L=$('#list');
+ if(!c){L.innerHTML='<div class="c">Escolha uma <b>cidade</b> no filtro acima para montar a rota do dia.</div>';return}
+ let left=S.p.filter(p=>p.cid===c&&st(p.id)!=='ok');
+ if(!left.length){L.innerHTML='<div class="c">Nenhum pendente em '+esc(c)+'. 🎉</div>';return}
+ let at=pos,order=[];
+ if(!at){at=left[0]}
+ while(left.length){let bi=0,bd=1e9;left.forEach((p,i)=>{const d=dist(at,p);if(d<bd){bd=d;bi=i}});at=left.splice(bi,1)[0];order.push(at)}
+ let h=`<div class="c"><button class="s" style="width:100%" onclick="geo()">📍 ${pos?'Localização usada ✔ (atualizar)':'Começar perto de mim'}</button></div>`;
+ for(let i=0;i<order.length;i+=9){
+  const b=order.slice(i,i+9),last=b[b.length-1],way=b.slice(0,-1).map(p=>p.lat+','+p.lng).join('|');
+  const u=`https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}${way?'&waypoints='+encodeURIComponent(way):''}&travelmode=driving`;
+  h+=`<div class="c"><b>Lote ${i/9+1} · ${b.length} paradas</b><div class="m">${b.map((p,j)=>(i+j+1)+'. '+esc(p.nome)).join('<br>')}</div>
+  <div class="a"><button onclick="window.open('${u}','_blank')">🧭 Abrir lote no Maps</button></div></div>`;
+ }
+ L.innerHTML=h;
+}
+function geo(){navigator.geolocation.getCurrentPosition(g=>{pos={lat:g.coords.latitude,lng:g.coords.longitude};render()},()=>alert('Não consegui a localização. Ative o GPS e permita o acesso.'),{enableHighAccuracy:true,timeout:15000})}
+
+$('#list').onclick=e=>{
+ const b=e.target.closest('button[data-a]');if(!b)return;
+ const id=b.closest('.c').dataset.id,p=S.p.find(x=>x.id===id),a=b.dataset.a;
+ if(a==='nav')window.open(nav(p),'_blank');
+ else if(a==='undo'){delete S.st[id];delete S.cnt[id];if(S.dt)delete S.dt[id];save();render()}
+ else{if(st(id)!=='exec'){S.pv=S.pv||{};S.pv[id]=S.st[id]||''}S.st[id]='exec';save();render();openChk(id)}
+};
+let rowsCur=[];
+function copy(t){
+ try{const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:.01';document.body.appendChild(a);a.focus();a.select();a.setSelectionRange(0,t.length);const ok=document.execCommand('copy');a.remove();return ok}catch(e){return false}
+}
+async function cp(t,el){
+ let ok=false;
+ if(navigator.clipboard){try{await navigator.clipboard.writeText(t);ok=true}catch(e){}}
+ if(!ok)ok=copy(t);
+ if(ok)el.querySelector('.st').textContent='copiado ✔';
+ else prompt('Não consegui copiar sozinho. Segure sobre o texto, selecione tudo e copie:',t);
+}
+function openChk(id){
+ curId=id;const p=S.p.find(x=>x.id===id);
+ rowsCur=[['1. Estado',p.uf],['2. Cidade',p.cid],['3. Protocolo',p.id],['4. Empresa',p.emp],['5. Técnico',p.tec]];S.last=id;save();
+ $('#mc').innerHTML=`<b>${esc(p.nome)}</b><div class="m">Toque em cada campo para copiar.</div>`+
+ rowsCur.map(([l,v],i)=>`<div class="f" data-i="${i}"><span>${l}<br><b>${esc(v)}</b></span><span class="st">copiar</span></div>`).join('')+
+ `<div class="a"><button class="o" onclick="openForms()">📋 Abrir Forms</button></div>
+ <h3>Resultado da fiscalização</h3>
+ <div class="a"><button class="g" onclick="finish('ok')">✅ OK</button><button style="background:#c0392b" onclick="finish('pen')">⚠ Pendência</button></div>
+ <div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="finish('cancel');return false">foi engano, cancelar</a></div>`;
+ $('#m').style.display='block';
+}
+$('#mc').onclick=e=>{const f=e.target.closest('.f');if(f)cp(rowsCur[f.dataset.i][1],f)};
+function finish(r){
+ if(r==='cancel'){const pv=(S.pv||{})[curId];if(pv)S.st[curId]=pv;else delete S.st[curId]}
+ else{S.st[curId]=r;S.cnt[curId]=r;S.dt=S.dt||{};S.dt[curId]=new Date().toLocaleDateString('pt-BR')}
+ S.last=null;save();$('#m').style.display='none';render();
+}
+function openForms(){
+ if(!S.u){const u=prompt('Cole o link do formulário (só precisa uma vez):');if(!u)return;S.u=u;save()}
+ window.open(S.u,'_blank');
+}
+
+fill();render();
+if(S.last&&S.p.find(x=>x.id===S.last))openChk(S.last);
+if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script></body></html>
