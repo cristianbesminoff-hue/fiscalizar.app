@@ -21,29 +21,29 @@ main{padding:8px;padding-bottom:40px}.c{background:#fff;border-radius:10px;paddi
 .ch{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}.ch button{background:#e3e8ef;color:#1a1d21;padding:8px 10px;font-size:13px}
 .ch button.on{background:#1a8a4a;color:#fff}.ch button.on.bad{background:#c0392b}
 .f{display:flex;justify-content:space-between;gap:8px;padding:8px;background:#fff;border-radius:8px;margin-bottom:4px;font-size:14px}
-.f span:last-child{color:#0b5cad;white-space:nowrap}h3{margin:12px 0 4px}.s-pend{border-left:6px solid #0b5cad}.s-exec{border-left:6px solid #e67e22;background:#fff1e0}.s-pen{border-left:6px solid #c0392b}.s-ok{border-left:6px solid #1a8a4a}.f b{user-select:all;-webkit-user-select:all;font-size:17px}.f{padding:14px 10px}
+.f span:last-child{color:#0b5cad;white-space:nowrap}h3{margin:12px 0 4px}#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}.s-pend{border-left:6px solid #0b5cad}.s-exec{border-left:6px solid #e67e22;background:#fff1e0}.s-pen{border-left:6px solid #c0392b}.s-ok{border-left:6px solid #1a8a4a}.f b{user-select:all;-webkit-user-select:all;font-size:17px}.f{padding:14px 10px}
 </style></head><body>
 <header>
  <div class="r"><button class="s" onclick="$('#file').click()">📂 Importar KML</button>
  <select id="cf" onchange="render()"></select></div>
- <div class="r"><input id="q" placeholder="Buscar nome, protocolo, endereço" oninput="render()"></div>
+ <div class="r"><input id="q" placeholder="Buscar nome, protocolo, endereço" oninput="render()"><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div>
  <div class="tabs" id="tabs"></div>
  <input type="file" id="file" multiple hidden>
 </header>
 <main><div id="list"></div><div id="map"></div></main>
+<div id="gate"><div class="gb" id="gc">Carregando...</div></div>
 <div id="m"><div id="mc"></div></div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const tc=s=>s.toLowerCase().replace(/(^|\s)\S/g,m=>m.toUpperCase());
-let S;try{S=JSON.parse(localStorage.getItem('fp'))}catch(e){}
-S=S||{p:[],v:{},c:{},u:''};S.st=S.st||{};for(const k in S.v)S.st[k]=S.st[k]||'ok';S.v={};
+let S={p:[],v:{},c:{},u:'',st:{},ifs:{}},KEY=null;
 const st=id=>S.st[id]||'pend';
 const META=220,mk=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
 S.m=S.m||mk();
 if(!S.cnt){S.cnt={};for(const k in S.st)if(S.st[k]==='ok'||S.st[k]==='pen')S.cnt[k]=S.st[k]}
-const save=()=>{try{localStorage.setItem('fp',JSON.stringify(S))}catch(e){}};
+const save=()=>{if(!KEY)return;S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}cloudPush()};
 let tab='pend',map,layer,pos=null,cur={},curId=null;
 const TABS=[['pend','Pendentes'],['map','Mapa'],['rota','Rota']];
 const A='APROVADO',R='REPROVADO';
@@ -121,10 +121,26 @@ function pdfMes(){
  const b=mkpdf('Protocolos fiscalizados - '+S.m,'Total: '+e.length+' protocolos',e.map(([id],i)=>(i+1)+'.  '+id+'   '+((S.dt||{})[id]||'-')));
  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fiscalizacao-'+S.m+'.pdf';document.body.appendChild(a);a.click();a.remove();
 }
+function ifsNovo(){
+ $('#mc').innerHTML=`<b>Nova fiscalização IFS</b><div class="m">Data e horário são salvos automaticamente.</div><input id="ifn" inputmode="numeric" placeholder="Número do protocolo" style="margin:8px 0"><div class="a"><button class="g" onclick="ifsSalvar('ok')">✅ OK</button><button style="background:#c0392b" onclick="ifsSalvar('pen')">❌ Não OK</button></div><div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="$('#m').style.display='none';return false">cancelar</a></div>`;
+ $('#m').style.display='block';
+}
+function ifsSalvar(r){
+ const n=$('#ifn').value.trim().replace(/[^\w-]/g,'');if(!n){alert('Digite o número do protocolo.');return}
+ const k='IFS-'+n;
+ if(S.ifs[k]&&!confirm('Esse protocolo IFS já foi lançado. Substituir?'))return;
+ const d=new Date();S.ifs[k]={id:n,r,t:d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
+ S.cnt[k]=r;S.dt=S.dt||{};S.dt[k]=d.toLocaleDateString('pt-BR');
+ save();$('#m').style.display='none';render();
+}
+function ifsDel(k){
+ if(!confirm('Excluir este lançamento IFS?'))return;
+ delete S.ifs[k];delete S.cnt[k];if(S.dt)delete S.dt[k];save();render();
+}
 function zerar(){
  if(!confirm('Zerar o aplicativo? Apaga TODOS os protocolos, marcações, contador e histórico. O link do Forms continua salvo.'))return;
  if(!confirm('Tem certeza? Não dá pra desfazer.'))return;
- const u=S.u;S={p:[],v:{},c:{},u,st:{},cnt:{},dt:{},h:{},m:mk()};
+ const u=S.u;S={p:[],v:{},c:{},u,st:{},cnt:{},dt:{},h:{},ifs:{},m:mk()};
  $('#m').style.display='none';save();fill();render();
 }
 function virar(){
@@ -133,21 +149,22 @@ function virar(){
  pdfMes();
  S.h=S.h||{};S.h[S.m]={ok,pen};
  S.p=S.p.filter(p=>st(p.id)!=='ok');for(const k in S.st)if(S.st[k]==='ok')delete S.st[k];
- S.cnt={};S.dt={};S.m=mk();S.last=null;save();fill();render();
+ S.cnt={};S.dt={};S.ifs={};S.m=mk();S.last=null;save();fill();render();
 }
 function render(){
  $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="${k===tab?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('');
  const L=$('#list'),M=$('#map');
  M.style.display=tab==='map'?'block':'none';L.style.display=tab==='map'?'none':'block';
- if(!S.p.length){L.innerHTML='<div class="c">Toque em <b>Importar KML</b> para carregar os protocolos.</div>';return}
+ if(!S.p.length&&!Object.keys(S.cnt).length){L.innerHTML='<div class="c">Toque em <b>Importar KML</b> para carregar os protocolos.</div>';return}
  if(tab==='pend'){
   const it=items('todo'),dn=items('done');
   const bn=S.m!==mk()?`<div class="c s-exec"><b>📅 Virou o mês</b><div class="m">Feche ${S.m} e comece de novo.</div><div class="a"><button class="o" onclick="virar()">Virar o mês</button></div></div>`:'';
-  const ok=dn.filter(p=>st(p.id)==='ok').length,pen=dn.length-ok;
+  const iv=Object.values(S.ifs),kok=dn.filter(p=>st(p.id)==='ok').length,ok=kok+iv.filter(v=>v.r==='ok').length,pen=dn.length-kok+iv.filter(v=>v.r==='pen').length;
+  const ifl=Object.entries(S.ifs).map(([k,v])=>`<div class="c s-${v.r}"><b>IFS · ${esc(v.id)}</b><div class="m"><span class="tag">IFS</span><span class="tag">${v.r==='ok'?'✔ ok':'⚠ não ok'}</span>${esc((S.dt||{})[k]||'')} ${esc(v.t)}</div><div class="a"><button class="s" onclick="ifsDel('${k}')">Excluir</button></div></div>`).join('');
   const hist=Object.entries(S.h||{}).sort().reverse().map(([k,v])=>k+': '+v.ok+' OK, '+v.pen+' pend.').join('<br>');
   L.innerHTML=bn+gauge()+`<div class="m" style="margin:2px 4px 8px">${it.length} a fazer</div>`+(it.map(card).join('')||'<div class="c">Nada a fazer. 🎉</div>')+
-   `<details class="c"><summary><b>Concluídos</b> · ${ok} OK · ${pen} pendência${pen==1?'':'s'}</summary><div style="margin-top:8px">${dn.map(card).join('')}</div></details>`+
-   `<div class="c"><div class="a"><button class="s" onclick="pdfMes()">📄 PDF do mês</button><button class="s" onclick="virar()">📅 Virar o mês</button></div><div class="a"><button style="background:#c0392b" onclick="zerar()">🗑 Zerar aplicativo</button></div><div class="m" style="margin-top:6px">${hist}</div></div>`;
+   `<details class="c"><summary><b>Concluídos</b> · ${ok} OK · ${pen} pendência${pen==1?'':'s'}</summary><div style="margin-top:8px">${ifl}${dn.map(card).join('')}</div></details>`+
+   `<div class="c"><div class="a"><button class="o" onclick="ifsNovo()">➕ Fiscalização IFS</button></div><div class="a" style="margin-top:6px"><button class="s" onclick="pdfMes()">📄 PDF do mês</button><button class="s" onclick="virar()">📅 Virar o mês</button></div><div class="a"><button style="background:#c0392b" onclick="zerar()">🗑 Zerar aplicativo</button></div><div class="m" style="margin-top:6px">${hist}</div></div>`;
  }else if(tab==='map')drawMap();
  else drawRota();
 }
@@ -218,7 +235,131 @@ function openForms(){
  window.open(S.u,'_blank');
 }
 
+
+/* ===== Login + Firebase (nuvem) ===== */
+const FBV='10.14.1',FBC={apiKey:"AIzaSyDVK9Xo4URV_hbG133RMhjyiAiCkqLBT4k",authDomain:"vistoria-ftta.firebaseapp.com",databaseURL:"https://vistoria-ftta-default-rtdb.firebaseio.com",projectId:"vistoria-ftta",storageBucket:"vistoria-ftta.firebasestorage.app",messagingSenderId:"470874503323",appId:"1:470874503323:web:4739909f2deca9c311ee3e"};
+let CL=null,cst='off',ptm=null,lastSync=0,entered=false,unlocked=false,fresh=false;
+const EM={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/user-not-found':'E-mail ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Espere um pouco.','auth/network-request-failed':'Sem internet.','auth/user-disabled':'Conta desativada.'};
+function norm(){S.p=S.p||[];S.v=S.v||{};S.c=S.c||{};S.st=S.st||{};S.ifs=S.ifs||{};S.cnt=S.cnt||{};S.dt=S.dt||{};S.h=S.h||{};S.m=S.m||mk();S.u=S.u||''}
+function initS(raw){
+ S=raw||{p:[],v:{},c:{},u:''};S.st=S.st||{};S.ifs=S.ifs||{};for(const k in S.v)S.st[k]=S.st[k]||'ok';S.v={};S.m=S.m||mk();
+ if(!S.cnt){S.cnt={};for(const k in S.st)if(S.st[k]==='ok'||S.st[k]==='pen')S.cnt[k]=S.st[k]}
+ norm();fill();render();
+}
+const hasData=()=>S.p.length||Object.keys(S.cnt).length||Object.keys(S.ifs).length;
+const GATE=h=>{$('#gc').innerHTML=h;$('#gate').style.display='flex'};
+function openApp(){entered=true;$('#gate').style.display='none'}
+function loadUser(uid,email){
+ KEY='fp_'+uid;let raw=null;
+ try{raw=JSON.parse(localStorage.getItem(KEY))}catch(e){}
+ if(!raw){try{const lg=localStorage.getItem('fp');if(lg){raw=JSON.parse(lg);localStorage.setItem(KEY,lg);localStorage.removeItem('fp')}}catch(e){}}
+ initS(raw);try{localStorage.setItem('fp_last',JSON.stringify({uid,email}))}catch(e){}
+ if(S.last&&S.p.find(x=>x.id===S.last))openChk(S.last);
+}
+function localMode(){KEY='fp';let raw=null;try{raw=JSON.parse(localStorage.getItem('fp'))}catch(e){}initS(raw);openApp();cloudUI()}
+/* digital (WebAuthn): trava local do app */
+const bioKey=u=>'bio_'+u;
+const bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials&&location.protocol==='https:');
+const b64=x=>btoa(String.fromCharCode(...new Uint8Array(x)));
+const unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+async function bioEnable(u){
+ try{
+  const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Fiscalização'},user:{id:new TextEncoder().encode(u.uid).slice(0,64),name:u.email,displayName:u.email},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000}});
+  localStorage.setItem(bioKey(u.uid),b64(c.rawId));return true;
+ }catch(e){return false}
+}
+async function bioCheck(uid){
+ try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(localStorage.getItem(bioKey(uid)))}],userVerification:'required',timeout:60000}});return true}catch(e){return false}
+}
+async function bioGo(){
+ if(!(await bioEnable(CL.user)))alert('Não consegui ativar a digital neste aparelho.');
+ enter(CL.user);
+}
+async function bioUnlock(){
+ const u=CL&&CL.user;if(!u)return;
+ if(await bioCheck(u.uid))enter(u);else{const e=$('#lerr');if(e)e.textContent='Digital não reconhecida. Tente de novo.'}
+}
+function showLock(u){
+ GATE(`<b>Fiscalização de Protocolos</b><div class="m">${esc(u.email)}</div><div class="a" style="margin-top:12px"><button class="g" onclick="bioUnlock()">👆 Desbloquear com a digital</button></div><div id="lerr" class="m" style="color:#c0392b;margin-top:8px"></div><div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="CL.Au.signOut(CL.auth);return false">usar outra conta</a></div>`);
+}
+function loginUI(){
+ GATE(`<b>Fiscalização de Protocolos</b><div class="m">Entre com seu e-mail e senha.</div><input id="le" type="email" autocomplete="username" placeholder="E-mail" style="margin:10px 0 8px"><input id="lp" type="password" autocomplete="current-password" placeholder="Senha"><div id="lerr" class="m" style="color:#c0392b;margin-top:6px"></div><div class="a" style="margin-top:10px"><button onclick="doLogin()">Entrar</button></div>`);
+}
+async function doLogin(){
+ const e=$('#le').value.trim(),p=$('#lp').value,er=$('#lerr');
+ if(!e||!p){er.textContent='Preencha e-mail e senha.';return}
+ er.textContent='Entrando...';fresh=true;
+ try{await CL.Au.signInWithEmailAndPassword(CL.auth,e,p)}catch(x){fresh=false;er.textContent=EM[x.code]||('Erro: '+(x.code||x.message))}
+}
+function enter(u){
+ unlocked=true;
+ if(fresh&&bioOK()&&!localStorage.getItem(bioKey(u.uid))){
+  fresh=false;
+  GATE(`<b>Ativar a digital?</b><div class="m">Nas próximas vezes você abre o app só com a digital. Vale só para este aparelho.</div><div class="a" style="margin-top:12px"><button class="s" onclick="enter(CL.user)">Agora não</button><button class="g" onclick="bioGo()">Ativar</button></div>`);
+  return;
+ }
+ fresh=false;loadUser(u.uid,u.email);openApp();cloudPull();
+}
+function authChanged(u){
+ CL.user=u;
+ if(!u){cst='login';cloudUI();unlocked=false;entered=false;KEY=null;initS(null);loginUI();return}
+ if(KEY==='fp_'+u.uid){cloudPull();return}
+ if(bioOK()&&localStorage.getItem(bioKey(u.uid))&&!unlocked&&!fresh){showLock(u);return}
+ enter(u);
+}
+function offlineGate(){
+ if(entered)return;let l=null;try{l=JSON.parse(localStorage.getItem('fp_last'))}catch(e){}
+ if(!l){GATE('<b>Sem conexão</b><div class="m">No primeiro acesso é preciso internet para entrar.</div><div class="a" style="margin-top:10px"><button onclick="location.reload()">Tentar de novo</button></div>');return}
+ GATE(`<b>Sem internet</b><div class="m">Entrar offline como ${esc(l.email)}. Os dados ficam no celular e sobem quando a conexão voltar.</div><div class="a" style="margin-top:10px"><button onclick="offEnter()">${localStorage.getItem(bioKey(l.uid))?'👆 Desbloquear com a digital':'Continuar offline'}</button></div>`);
+}
+async function offEnter(){
+ const l=JSON.parse(localStorage.getItem('fp_last'));
+ if(localStorage.getItem(bioKey(l.uid))&&!(await bioCheck(l.uid))){alert('Digital não reconhecida.');return}
+ loadUser(l.uid,l.email);openApp();
+}
+function cloudUI(){const b=$('#cl');if(b)b.textContent=({off:'☁✖',login:'☁⚠',sync:'☁…',ok:'☁✔',err:'☁!'})[cst]||'☁'}
+async function cloudInit(){
+ if(CL)return;
+ if(!/^https?:$/.test(location.protocol)){if(!entered)localMode();return}
+ try{
+  const B='https://www.gstatic.com/firebasejs/'+FBV+'/';
+  const to=new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),8000));
+  const [A,Au,D]=await Promise.race([Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-database.js')]),to]);
+  const app=A.initializeApp(FBC);CL={Au,D,auth:Au.getAuth(app),db:D.getDatabase(app),user:null};
+  Au.onAuthStateChanged(CL.auth,authChanged);
+ }catch(e){CL=null;cst='off';cloudUI();offlineGate()}
+}
+async function cloudPull(){
+ if(!CL||!CL.user||!KEY)return;cst='sync';cloudUI();
+ try{
+  const v=(await CL.D.get(CL.D.ref(CL.db,'users/'+CL.user.uid+'/state'))).val();
+  if(v&&v.json&&v.ts>(S.ts||0)){const R=JSON.parse(v.json);R.ts=v.ts;S=R;norm();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}fill();render()}
+  else if((!v&&hasData())||(v&&S.ts&&S.ts>v.ts)){S.ts=S.ts||Date.now();await cloudPushNow();return}
+  cst='ok';lastSync=Date.now();
+ }catch(e){cst='err'}
+ cloudUI();
+}
+function cloudPush(){if(!CL||!CL.user)return;cst='sync';cloudUI();clearTimeout(ptm);ptm=setTimeout(cloudPushNow,1500)}
+async function cloudPushNow(){
+ if(!CL||!CL.user||!KEY)return;
+ try{const o={...S};delete o.last;await CL.D.set(CL.D.ref(CL.db,'users/'+CL.user.uid+'/state'),{json:JSON.stringify(o),ts:S.ts||Date.now()});cst='ok';lastSync=Date.now()}catch(e){cst='err'}
+ cloudUI();
+}
+function bioToggle(){
+ const u=CL.user;
+ if(localStorage.getItem(bioKey(u.uid))){localStorage.removeItem(bioKey(u.uid));$('#m').style.display='none';alert('Digital desativada.')}
+ else bioEnable(u).then(ok=>{$('#m').style.display='none';alert(ok?'Digital ativada.':'Não consegui ativar a digital neste aparelho.')});
+}
+function cloudBtn(){
+ if(!/^https?:$/.test(location.protocol)){alert('A nuvem e o login só funcionam na versão instalada (a do GitHub). Nesta versão os dados ficam só no celular.');return}
+ if(!CL||!CL.user){alert('Sem conexão com a nuvem agora. O que você marcar fica salvo no celular e sobe quando a internet voltar.');cloudInit();return}
+ const t={ok:'Sincronizado',sync:'Sincronizando...',err:'Erro ao sincronizar',off:'Sem conexão',login:'Não conectado'}[cst];
+ $('#mc').innerHTML=`<b>Conta</b><div class="m">${esc(CL.user.email)}<br>${t}${lastSync?' às '+new Date(lastSync).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</div><div class="a"><button class="s" onclick="$('#m').style.display='none'">Fechar</button><button class="g" onclick="cloudPushNow();$('#m').style.display='none'">Enviar agora</button></div>${bioOK()?`<div class="a" style="margin-top:6px"><button class="s" onclick="bioToggle()">${localStorage.getItem(bioKey(CL.user.uid))?'Desativar digital':'Ativar digital'}</button></div>`:''}<div class="a" style="margin-top:6px"><button style="background:#c0392b" onclick="$('#m').style.display='none';CL.Au.signOut(CL.auth)">Sair da conta</button></div>`;
+ $('#m').style.display='block';
+}
+addEventListener('online',()=>{CL?cloudPull():cloudInit()});
+
 fill();render();
-if(S.last&&S.p.find(x=>x.id===S.last))openChk(S.last);
+cloudInit();
 if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>
