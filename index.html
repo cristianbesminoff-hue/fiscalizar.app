@@ -58,7 +58,7 @@ const dist=(a,b)=>{const k=Math.PI/180,x=(b.lng-a.lng)*k*Math.cos((a.lat+b.lat)*
 
 $('#file').onchange=async e=>{
  const fs=[...e.target.files];if(!fs.length)return;
- const old=new Map(S.p.map(p=>[p.id,p]));let n=0;
+ const old=new Map(S.p.map(p=>[p.id,p]));let n=0,dp=0,sk=0;
  for(const f of fs){
   const x=new DOMParser().parseFromString(await f.text(),'text/xml');
   for(const pm of x.getElementsByTagName('Placemark')){
@@ -68,11 +68,12 @@ $('#file').onchange=async e=>{
    const cp=(d.Cidade||'').split('-');const uf=cp.length>1?cp.pop():'';
    const nm=pm.getElementsByTagName('n')[0]||pm.getElementsByTagName('name')[0];
    const p={id:d.Protocolo,nome:nm?nm.textContent:'',emp:d['Empresa'],tec:d['Técnico'],cid:tc(cp.join('-').trim()),uf,end:d['Endereço'],serv:d['Serviço'],data:d['Data Finalizado'],lat,lng};
-   if(!old.has(p.id))n++;old.set(p.id,p);
+   if(S.ex[p.id]||S.done[p.id]){sk++;continue}
+   if(old.has(p.id))dp++;else n++;old.set(p.id,p);
   }
  }
  S.p=[...old.values()];save();fill();render();e.target.value='';
- alert(n+' protocolos novos. Total: '+S.p.length);
+ alert(n+' novos somados.\n'+dp+' já estavam no mapa (não duplicou).\n'+sk+' ignorados (excluídos ou já concluídos).\nTotal no mapa: '+S.p.length);
 };
 
 function fill(){
@@ -90,7 +91,7 @@ function card(p){
  return `<div class="c s-${t}" data-id="${p.id}"><b>${esc(p.nome)}</b>
  <div class="m">${esc(p.end)} · ${esc(p.cid)}-${esc(p.uf)}</div>
  <div class="m"><span class="tag">${esc(p.serv)}</span><span class="tag">${esc(p.id)}</span>${LB[t]?`<span class="tag">${LB[t]}</span>`:''}</div>
- <div class="a"><button data-a="nav">🧭 Navegar</button>${t==='ok'?'<button class="s" data-a="undo">Desfazer</button>':'<button class="o" data-a="run">▶ Executar</button>'}</div></div>`;
+ <div class="a"><button data-a="nav">🧭 Navegar</button>${t==='ok'?'<button class="s" data-a="undo">Desfazer</button>':'<button class="o" data-a="run">▶ Executar</button>'}${t==='pend'?'<button data-a="del" style="flex:0 0 46px;background:#c0392b">✖</button>':''}</div></div>`;
 }
 function gauge(){
  const v=Object.values(S.cnt),n=v.length,ok=v.filter(x=>x==='ok').length,pen=n-ok,pc=Math.min(n/META,1),a=-90+180*pc;
@@ -121,6 +122,15 @@ function pdfMes(){
  const b=mkpdf('Protocolos fiscalizados - '+S.m,'Total: '+e.length+' protocolos',e.map(([id],i)=>(i+1)+'.  '+id+'   '+((S.dt||{})[id]||'-')));
  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fiscalizacao-'+S.m+'.pdf';document.body.appendChild(a);a.click();a.remove();
 }
+function excl(id){
+ const p=S.p.find(x=>x.id===id);if(!p||!confirm('Excluir "'+p.nome+'" do mapa e da lista? Dá pra restaurar depois.'))return;
+ S.ex[id]=p;S.p=S.p.filter(x=>x.id!==id);delete S.st[id];save();fill();render();
+}
+function restaurar(id){const p=S.ex[id];if(!p)return;S.p.push(p);delete S.ex[id];save();fill();render()}
+function exHtml(){
+ const e=Object.values(S.ex);if(!e.length)return '';
+ return `<details class="c"><summary><b>Excluídos</b> · ${e.length}</summary><div style="margin-top:8px">`+e.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee"><span><b>${esc(p.nome)}</b><div class="m">${esc(p.cid)} · ${esc(p.id)}</div></span><button class="s" style="flex:0 0 auto" onclick="restaurar('${esc(p.id)}')">Restaurar</button></div>`).join('')+'</div></details>';
+}
 function ifsNovo(){
  $('#mc').innerHTML=`<b>Nova fiscalização IFS</b><div class="m">Data e horário são salvos automaticamente.</div><input id="ifn" inputmode="numeric" placeholder="Número do protocolo" style="margin:8px 0"><div class="a"><button class="g" onclick="ifsSalvar('ok')">✅ OK</button><button style="background:#c0392b" onclick="ifsSalvar('pen')">❌ Não OK</button></div><div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="$('#m').style.display='none';return false">cancelar</a></div>`;
  $('#m').style.display='block';
@@ -140,7 +150,7 @@ function ifsDel(k){
 function zerar(){
  if(!confirm('Zerar o aplicativo? Apaga TODOS os protocolos, marcações, contador e histórico. O link do Forms continua salvo.'))return;
  if(!confirm('Tem certeza? Não dá pra desfazer.'))return;
- const u=S.u;S={p:[],v:{},c:{},u,st:{},cnt:{},dt:{},h:{},ifs:{},m:mk()};
+ const u=S.u;S={p:[],v:{},c:{},u,st:{},cnt:{},dt:{},h:{},ifs:{},ex:{},done:{},m:mk()};
  $('#m').style.display='none';save();fill();render();
 }
 function virar(){
@@ -148,7 +158,7 @@ function virar(){
  if(!confirm(`Virar o mês? Fecha ${S.m} com ${ok} OK e ${pen} pendência(s). Os OK saem da lista; as pendências e o que não foi feito continuam. O PDF do mês será baixado.`))return;
  pdfMes();
  S.h=S.h||{};S.h[S.m]={ok,pen};
- S.p=S.p.filter(p=>st(p.id)!=='ok');for(const k in S.st)if(S.st[k]==='ok')delete S.st[k];
+ S.p.forEach(p=>{if(st(p.id)==='ok')S.done[p.id]=1});S.p=S.p.filter(p=>st(p.id)!=='ok');for(const k in S.st)if(S.st[k]==='ok')delete S.st[k];
  S.cnt={};S.dt={};S.ifs={};S.m=mk();S.last=null;save();fill();render();
 }
 function render(){
@@ -163,7 +173,7 @@ function render(){
   const ifl=Object.entries(S.ifs).map(([k,v])=>`<div class="c s-${v.r}"><b>IFS · ${esc(v.id)}</b><div class="m"><span class="tag">IFS</span><span class="tag">${v.r==='ok'?'✔ ok':'⚠ não ok'}</span>${esc((S.dt||{})[k]||'')} ${esc(v.t)}</div><div class="a"><button class="s" onclick="ifsDel('${k}')">Excluir</button></div></div>`).join('');
   const hist=Object.entries(S.h||{}).sort().reverse().map(([k,v])=>k+': '+v.ok+' OK, '+v.pen+' pend.').join('<br>');
   L.innerHTML=bn+gauge()+`<div class="m" style="margin:2px 4px 8px">${it.length} a fazer</div>`+(it.map(card).join('')||'<div class="c">Nada a fazer. 🎉</div>')+
-   `<details class="c"><summary><b>Concluídos</b> · ${ok} OK · ${pen} pendência${pen==1?'':'s'}</summary><div style="margin-top:8px">${ifl}${dn.map(card).join('')}</div></details>`+
+   `<details class="c"><summary><b>Concluídos</b> · ${ok} OK · ${pen} pendência${pen==1?'':'s'}</summary><div style="margin-top:8px">${ifl}${dn.map(card).join('')}</div></details>`+exHtml()+
    `<div class="c"><div class="a"><button class="o" onclick="ifsNovo()">➕ Fiscalização IFS</button></div><div class="a" style="margin-top:6px"><button class="s" onclick="pdfMes()">📄 PDF do mês</button><button class="s" onclick="virar()">📅 Virar o mês</button></div><div class="a"><button style="background:#c0392b" onclick="zerar()">🗑 Zerar aplicativo</button></div><div class="m" style="margin-top:6px">${hist}</div></div>`;
  }else if(tab==='map')drawMap();
  else drawRota();
@@ -173,7 +183,7 @@ function drawMap(){
  if(!map){map=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map)}
  layer.clearLayers();const it=items();
  it.forEach(p=>L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillOpacity:.95,fillColor:({exec:'#e67e22',pen:'#c0392b'})[st(p.id)]||'#0b5cad'})
-  .bindPopup(`<b>${esc(p.nome)}</b><br>${esc(p.end)}<br><a href="${nav(p)}" target="_blank">🧭 Navegar</a>`).addTo(layer));
+  .bindPopup(`<b>${esc(p.nome)}</b><br>${esc(p.end)}<br><a href="${nav(p)}" target="_blank">🧭 Navegar</a>${st(p.id)==='pend'?` · <a href="#" onclick="excl('${p.id}');return false">✖ Excluir</a>`:''}`).addTo(layer));
  setTimeout(()=>{map.invalidateSize();if(it.length)map.fitBounds(it.map(p=>[p.lat,p.lng]),{padding:[30,30]})},50);
 }
 function drawRota(){
@@ -199,6 +209,7 @@ $('#list').onclick=e=>{
  const b=e.target.closest('button[data-a]');if(!b)return;
  const id=b.closest('.c').dataset.id,p=S.p.find(x=>x.id===id),a=b.dataset.a;
  if(a==='nav')window.open(nav(p),'_blank');
+ else if(a==='del')excl(id);
  else if(a==='undo'){delete S.st[id];delete S.cnt[id];if(S.dt)delete S.dt[id];save();render()}
  else{if(st(id)!=='exec'){S.pv=S.pv||{};S.pv[id]=S.st[id]||''}S.st[id]='exec';save();render();openChk(id)}
 };
@@ -240,7 +251,7 @@ function openForms(){
 const FBV='10.14.1',FBC={apiKey:"AIzaSyDVK9Xo4URV_hbG133RMhjyiAiCkqLBT4k",authDomain:"vistoria-ftta.firebaseapp.com",databaseURL:"https://vistoria-ftta-default-rtdb.firebaseio.com",projectId:"vistoria-ftta",storageBucket:"vistoria-ftta.firebasestorage.app",messagingSenderId:"470874503323",appId:"1:470874503323:web:4739909f2deca9c311ee3e"};
 let CL=null,cst='off',ptm=null,lastSync=0,entered=false,unlocked=false,fresh=false;
 const EM={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/user-not-found':'E-mail ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Espere um pouco.','auth/network-request-failed':'Sem internet.','auth/user-disabled':'Conta desativada.'};
-function norm(){S.p=S.p||[];S.v=S.v||{};S.c=S.c||{};S.st=S.st||{};S.ifs=S.ifs||{};S.cnt=S.cnt||{};S.dt=S.dt||{};S.h=S.h||{};S.m=S.m||mk();S.u=S.u||''}
+function norm(){S.p=S.p||[];S.v=S.v||{};S.c=S.c||{};S.st=S.st||{};S.ifs=S.ifs||{};S.cnt=S.cnt||{};S.dt=S.dt||{};S.h=S.h||{};S.m=S.m||mk();S.u=S.u||'';S.ex=S.ex||{};S.done=S.done||{}}
 function initS(raw){
  S=raw||{p:[],v:{},c:{},u:''};S.st=S.st||{};S.ifs=S.ifs||{};for(const k in S.v)S.st[k]=S.st[k]||'ok';S.v={};S.m=S.m||mk();
  if(!S.cnt){S.cnt={};for(const k in S.st)if(S.st[k]==='ok'||S.st[k]==='pen')S.cnt[k]=S.st[k]}
