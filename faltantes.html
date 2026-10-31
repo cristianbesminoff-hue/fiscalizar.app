@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Faltantes em vistoria</title><meta name="theme-color" content="#0b5cad">
+<style>
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:#f2f4f7;color:#1a1d21}
+header{position:sticky;top:0;z-index:5;background:#0b5cad;color:#fff;padding:8px}
+.r{display:flex;gap:6px;margin-bottom:6px}.r>*{flex:1;min-width:0}
+input,select,textarea{font:inherit;padding:9px;border:1px solid #ccd;border-radius:8px;width:100%}
+button{font:inherit;border:0;border-radius:8px;padding:10px;background:#0b5cad;color:#fff}
+button.s{background:#e3e8ef;color:#1a1d21}button.g{background:#1a8a4a}button.x{background:#c0392b}button.o{background:#d9822b}
+main{padding:8px;padding-bottom:40px}.c{background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0002;border-left:6px solid #0b5cad}
+.c.ok{border-left-color:#1a8a4a}label{display:block;margin:10px 0 4px;font-size:13px;color:#556}
+.m{color:#556;font-size:13px;margin:2px 0}.a{display:flex;gap:6px;margin-top:8px}.a button{flex:1}
+.tag{display:inline-block;background:#e3e8ef;border-radius:6px;padding:1px 6px;font-size:12px;margin-right:4px}
+.ch{display:flex;gap:6px}.ch button{flex:1;background:#e3e8ef;color:#1a1d21}.ch button.on{background:#0b5cad;color:#fff}
+#its{max-height:270px;overflow-y:auto;border:1px solid #dde;border-radius:8px;margin-top:6px}
+table{width:100%;border-collapse:collapse}td{padding:9px 8px;border-bottom:1px solid #eef}.pl{color:#1a8a4a;font-weight:700;font-size:20px;text-align:right;width:36px}
+.ir{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #eef}.ir button{flex:0 0 auto;padding:7px 10px;font-size:13px}
+.q{display:flex;align-items:center;gap:6px}.q button{padding:4px 10px;background:#e3e8ef;color:#1a1d21}
+#pm{position:fixed;inset:0;background:#0007;display:none;z-index:2000;overflow:auto}#pm>div{background:#f2f4f7;margin:16px 8px;border-radius:12px;padding:14px}
+#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
+#rep{display:none}
+@media print{body>*:not(#rep){display:none!important}#rep{display:block;padding:10px;font-family:system-ui,sans-serif;color:#000;background:#fff}body{background:#fff}.rt{width:100%;border-collapse:collapse;font-size:12px}.rt th,.rt td{border:1px solid #444;padding:4px 6px;text-align:left}h2{margin:0 0 6px}}
+</style></head><body>
+<header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Faltantes em vistoria</b></header>
+<main>
+<div class="c"><b>Novo registro</b>
+ <label>Técnico</label><input id="tec" list="tl" placeholder="Nome do técnico" autocomplete="off"><datalist id="tl"></datalist>
+ <label>Classificação</label><div class="ch" id="cls"><button data-v="Operação">Operação</button><button data-v="Ativação">Ativação</button></div>
+ <div class="m" id="now"></div>
+ <label>Buscar item faltante (digite as letras)</label><input id="bq" placeholder="Ex.: luva, alicate, otdr..." oninput="drawItems()" autocomplete="off">
+ <div id="its"></div>
+ <label>Itens selecionados</label><div id="sel"></div>
+ <div class="a"><button class="g" onclick="salvar()">Salvar registro</button></div>
+</div>
+<div class="c"><b>Registros</b>
+ <div class="r" style="margin-top:8px"><input id="rq" placeholder="Buscar técnico" oninput="drawRecs()"><select id="rs" onchange="drawRecs()"><option value="pend">Pendentes</option><option value="todos">Todos</option></select></div>
+ <div id="recs"></div></div>
+<div class="a"><button class="o" onclick="printUI()">🖨 Imprimir</button></div>
+</main>
+<div id="pm"><div><b>Imprimir</b>
+ <label>O que imprimir</label><select id="pe" onchange="peChange()"><option value="total">Total (todos os itens)</option><option value="epi">Só EPIs</option><option value="ferr">Só ferramentas</option><option value="tec">Individual (um técnico)</option></select>
+ <div id="ptw" style="display:none"><label>Técnico</label><select id="pt"></select></div>
+ <label>Classificação</label><select id="pc"><option value="">Operação e Ativação</option><option>Operação</option><option>Ativação</option></select>
+ <label>Situação</label><select id="ps"><option value="pend">Pendentes de entrega</option><option value="ent">Entregues</option><option value="todos">Todas</option></select>
+ <div class="a"><button class="s" onclick="$('#pm').style.display='none'">Fechar</button><button onclick="relat()">Imprimir</button></div></div></div>
+<div id="rep"></div>
+<div id="gate"><div class="gb" id="gc">Carregando...</div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nz=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const fd=t=>new Date(t).toLocaleDateString('pt-BR'),ftm=t=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const EPIS=["Óculos Escuros", "Óculos Transparente", "Capacete", "Cinto Paraquedista", "Talabarte de Posicionamento","Trava Quedas", "Luva Isolante", "Luva de Cobertura", "Luva de Vaqueta", "Detector de Tensão", "Eureka", "Corda Linha de Vida", "Fita Catraca", "Fita de Ancoragem 1,20", "Fita de Ancoragem 0,80", "Calça Antichama", "Jaleco Antichama", "Camisa", "Botina", "Escada", "Cones", "Outro EPI"],FERR=["Alicate de Corte", "Alicate Universal", "Alicate de Bico", "Chave BAP", "Chave de Guarita", "Chave Philips P", "Chave Philips M", "Chave Philips G", "Chave de Fenda P", "Chave de Fenda M", "Chave de Fenda G", "Alicate Decapador", "Alicate Striper", "Power Meter", "Clivador", "Clivador de Fusão", "Caneta de Limpeza", "Frasco de Álcool", "Caneta Laser", "Máquina de Fusão", "Bancada Naval", "Morsa", "Martelo Unha", "Furadeira", "Decapador", "Alicate Crimpador", "Notebook", "Fusimec (Máquina de Cintar)", "Guia Passa Fio", "OTDR", "Identificador de Fibra Ativa", "Arco de Serra", "Lanterna LED", "Maçarico", "Rotulador Tubo Loose", "Decapador Longitudinal Tubo Loose", "Estilete", "Cavalete de Fibra", "Balde de Lona", "Etiquetadora", "Gabarito", "Outra Ferramenta"];
+const ITEMS=[...EPIS.map(n=>({n,c:'EPI'})),...FERR.map(n=>({n,c:'Ferramenta'}))];
+let F={recs:[]},SEL=[],CLS='',KEY=null;
+const save=()=>{if(!KEY)return;F.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(F))}catch(e){}cloudPush()};
+function drawItems(){
+ const w=nz($('#bq').value).split(/\s+/).filter(Boolean);
+ const it=ITEMS.map((x,i)=>[x,i]).filter(([x])=>w.every(k=>nz(x.n).includes(k)));
+ $('#its').innerHTML='<table>'+(it.map(([x,i])=>`<tr onclick="addIt(${i})"><td>${esc(x.n)}<br><span class="tag">${x.c}</span></td><td class="pl">+</td></tr>`).join('')||'<tr><td>Nada encontrado</td></tr>')+'</table>';
+}
+function addIt(i){
+ const x=ITEMS[i];let n=x.n;
+ if(n==='Outro EPI'||n==='Outra Ferramenta'){const d=prompt('Descreva: '+n);if(!d||!d.trim())return;n=n+': '+d.trim()}
+ const f=SEL.find(s=>s.n===n);if(f)f.q++;else SEL.push({n,cat:x.c,q:1});drawSel();
+}
+function drawSel(){
+ $('#sel').innerHTML=SEL.map((s,i)=>`<div class="ir"><span>${esc(s.n)}<br><span class="tag">${s.cat}</span></span><span class="q"><button onclick="qty(${i},-1)">−</button><b>${s.q}</b><button onclick="qty(${i},1)">+</button><button class="x" onclick="SEL.splice(${i},1);drawSel()">✖</button></span></div>`).join('')||'<div class="m">Toque num item da tabela para adicionar.</div>';
+}
+function qty(i,d){SEL[i].q=Math.max(1,SEL[i].q+d);drawSel()}
+$('#cls').onclick=e=>{const b=e.target.closest('button');if(!b)return;CLS=b.dataset.v;[...$('#cls').children].forEach(x=>x.classList.toggle('on',x===b))};
+function tick(){const d=new Date();$('#now').textContent='Data e hora automáticas: '+fd(d)+' '+d.toLocaleTimeString('pt-BR')}
+setInterval(tick,1000);tick();
+function salvar(){
+ const tec=$('#tec').value.trim();
+ if(!tec)return alert('Informe o nome do técnico.');
+ if(!CLS)return alert('Escolha Operação ou Ativação.');
+ if(!SEL.length)return alert('Escolha pelo menos um item.');
+ F.recs.unshift({id:Date.now(),tec,cl:CLS,ts:Date.now(),it:SEL.map(s=>({n:s.n,cat:s.cat,q:s.q,d:null}))});
+ SEL=[];CLS='';$('#tec').value='';$('#bq').value='';[...$('#cls').children].forEach(x=>x.classList.remove('on'));
+ save();drawAll();
+}
+function dur(ms){ms=Math.max(0,ms);const s=Math.floor(ms/1000),m=Math.floor(s/60),h=Math.floor(m/60),d=Math.floor(h/24),p=x=>String(x).padStart(2,'0');return d?d+'d '+p(h%24)+'h '+p(m%60)+'min':h?h+'h '+p(m%60)+'min '+p(s%60)+'s':m+'min '+p(s%60)+'s'}
+const tmTxt=(t,e)=>'⏱ '+dur((e||Date.now())-t);
+const tmCol=(t,e)=>e?'#1a8a4a':(Date.now()-t>72*36e5?'#c0392b':Date.now()-t>24*36e5?'#d9822b':'#556');
+const tmH=(t,e)=>`<span class="tm" data-t="${t}" data-e="${e||''}" style="color:${tmCol(t,e)};font-weight:600">${tmTxt(t,e)}</span>`;
+setInterval(()=>document.querySelectorAll('.tm').forEach(el=>{const t=+el.dataset.t,e=+el.dataset.e||0;el.textContent=tmTxt(t,e);el.style.color=tmCol(t,e)}),1000);
+function drawRecs(){
+ const q=nz($('#rq').value),s=$('#rs').value;
+ const h=F.recs.map((r,ri)=>[r,ri]).filter(([r])=>(!q||nz(r.tec).includes(q))&&(s==='todos'||r.it.some(i=>!i.d))).map(([r,ri])=>{
+  const all=r.it.every(i=>i.d);
+  return `<div class="c ${all?'ok':''}"><b>${esc(r.tec)}</b> <span class="tag">${esc(r.cl)}</span>${all?'<span class="tag" style="background:#c8ecd5">✔ entregue</span>':''}<div class="m">${fd(r.ts)} ${ftm(r.ts)} · ${tmH(r.ts,all?Math.max(...r.it.map(i=>i.d)):0)}</div>`+
+  r.it.map((i,ii)=>`<div class="ir"><span>${esc(i.n)} <b>×${i.q}</b><br><span class="m">${i.cat}${i.d?' · entregue '+fd(i.d)+' '+ftm(i.d):''} · ${tmH(r.ts,i.d||0)}</span></span><button class="${i.d?'s':'g'}" onclick="ent(${ri},${ii})">${i.d?'Desfazer':'Entregue'}</button></div>`).join('')+
+  `<div class="a"><button class="g" onclick="entAll(${ri})">Entregar tudo</button><button class="x" onclick="delRec(${ri})">Excluir</button></div></div>`}).join('');
+ $('#recs').innerHTML=h||'<div class="m" style="margin-top:8px">Nenhum registro.</div>';
+}
+function drawAll(){
+ $('#tl').innerHTML=[...new Set(F.recs.map(r=>r.tec))].sort().map(n=>`<option value="${esc(n)}">`).join('');
+ drawItems();drawSel();drawRecs();
+}
+function ent(ri,ii){const i=F.recs[ri].it[ii];i.d=i.d?null:Date.now();save();drawRecs()}
+function entAll(ri){F.recs[ri].it.forEach(i=>{if(!i.d)i.d=Date.now()});save();drawRecs()}
+function delRec(ri){if(!confirm('Excluir este registro?'))return;F.recs.splice(ri,1);save();drawAll()}
+function peChange(){$('#ptw').style.display=$('#pe').value==='tec'?'block':'none'}
+function printUI(){
+ $('#pt').innerHTML=[...new Set(F.recs.map(r=>r.tec))].sort().map(x=>`<option>${esc(x)}</option>`).join('');
+ $('#pm').style.display='block';peChange();
+}
+function relat(){
+ const e=$('#pe').value,t=$('#pt').value,c=$('#pc').value,s=$('#ps').value;
+ if(e==='tec'&&!t)return alert('Não há técnico com registro.');
+ const rows=[];
+ for(const r of F.recs){
+  if(c&&r.cl!==c)continue;if(e==='tec'&&r.tec!==t)continue;
+  for(const i of r.it){
+   if(s==='pend'&&i.d)continue;if(s==='ent'&&!i.d)continue;
+   if(e==='epi'&&i.cat!=='EPI')continue;if(e==='ferr'&&i.cat!=='Ferramenta')continue;
+   rows.push({r,i});
+  }
+ }
+ if(!rows.length)return alert('Nada para imprimir com esses filtros.');
+ const T={total:'Total',epi:'EPIs',ferr:'Ferramentas',tec:'Técnico: '+t}[e],now=Date.now();
+ let h=`<h2>Faltantes em vistoria - ${esc(T)}</h2><p>Classificação: ${c||'Operação e Ativação'} · Situação: ${{pend:'Pendentes de entrega',ent:'Entregues',todos:'Todas'}[s]} · Emitido em ${fd(now)} ${ftm(now)}</p>`;
+ if(e==='tec'){
+  rows.sort((a,b)=>a.r.ts-b.r.ts);
+  h+='<table class="rt"><tr><th>Data/hora</th><th>Item</th><th>Tipo</th><th>Class.</th><th>Qtd</th><th>Situação</th></tr>'+rows.map(({r,i})=>`<tr><td>${fd(r.ts)} ${ftm(r.ts)}</td><td>${esc(i.n)}</td><td>${i.cat}</td><td>${esc(r.cl)}</td><td>${i.q}</td><td>${i.d?'Entregue '+fd(i.d)+' (em '+dur(i.d-r.ts)+')':'Pendente há '+dur(now-r.ts)}</td></tr>`).join('')+`<tr><th colspan="4">Total</th><th>${rows.reduce((a,x)=>a+x.i.q,0)}</th><th></th></tr></table>`;
+ }else{
+  const m={};
+  for(const {r,i} of rows){const k=i.cat+'|'+i.n;const o=m[k]=m[k]||{n:i.n,cat:i.cat,Operação:0,'Ativação':0,ent:0,tot:0};o[r.cl]+=i.q;o.tot+=i.q;if(i.d)o.ent+=i.q}
+  const L=Object.values(m).sort((a,b)=>a.cat.localeCompare(b.cat)||a.n.localeCompare(b.n));
+  const cr=c!=='Ativação',ca=c!=='Operação',S2=k=>L.reduce((a,o)=>a+o[k],0);
+  h+='<table class="rt"><tr><th>Item</th><th>Tipo</th>'+(cr?'<th>Operação</th>':'')+(ca?'<th>Ativação</th>':'')+'<th>Total</th><th>Entregue</th><th>Falta entregar</th></tr>'+L.map(o=>`<tr><td>${esc(o.n)}</td><td>${o.cat}</td>${cr?`<td>${o.Operação}</td>`:''}${ca?`<td>${o['Ativação']}</td>`:''}<td>${o.tot}</td><td>${o.ent}</td><td>${o.tot-o.ent}</td></tr>`).join('')+`<tr><th colspan="2">Total</th>${cr?`<th>${S2('Operação')}</th>`:''}${ca?`<th>${S2('Ativação')}</th>`:''}<th>${S2('tot')}</th><th>${S2('ent')}</th><th>${S2('tot')-S2('ent')}</th></tr></table>`;
+ }
+ $('#rep').innerHTML=h;$('#pm').style.display='none';setTimeout(()=>window.print(),150);
+}
+/* ===== login + nuvem ===== */
+const FBV='10.14.1',FBC={apiKey:"AIzaSyDVK9Xo4URV_hbG133RMhjyiAiCkqLBT4k",authDomain:"vistoria-ftta.firebaseapp.com",databaseURL:"https://vistoria-ftta-default-rtdb.firebaseio.com",projectId:"vistoria-ftta",storageBucket:"vistoria-ftta.firebasestorage.app",messagingSenderId:"470874503323",appId:"1:470874503323:web:4739909f2deca9c311ee3e"};
+let CL=null,cst='off',ptm=null,lastSync=0,entered=false,unlocked=false,fresh=false;
+const EM={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/user-not-found':'E-mail ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Espere um pouco.','auth/network-request-failed':'Sem internet.','auth/user-disabled':'Conta desativada.'};
+const GATE=h=>{$('#gc').innerHTML=h;$('#gate').style.display='flex'};
+function openApp(){entered=true;$('#gate').style.display='none'}
+function fixF(){F.recs=F.recs||[];F.recs.forEach(r=>{if(r.cl==='Re'+'de')r.cl='Operação'})}
+function loadF(key){KEY=key;let r=null;try{r=JSON.parse(localStorage.getItem(key))}catch(e){}F=r||{recs:[]};fixF();drawAll()}
+const bioKey=u=>'bio_'+u,bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials&&location.protocol==='https:');
+const unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+async function bioCheck(uid){try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(localStorage.getItem(bioKey(uid)))}],userVerification:'required',timeout:60000}});return true}catch(e){return false}}
+async function bioUnlock(){const u=CL&&CL.user;if(!u)return;if(await bioCheck(u.uid))enter(u);else{const e=$('#lerr');if(e)e.textContent='Digital não reconhecida. Tente de novo.'}}
+function showLock(u){GATE(`<b>Faltantes em vistoria</b><div class="m">${esc(u.email)}</div><div class="a" style="margin-top:12px"><button class="g" onclick="bioUnlock()">👆 Desbloquear com a digital</button></div><div id="lerr" class="m" style="color:#c0392b;margin-top:8px"></div>`)}
+function loginUI(){GATE(`<b>Faltantes em vistoria</b><div class="m">Entre com seu e-mail e senha.</div><input id="le" type="email" autocomplete="username" placeholder="E-mail" style="margin:10px 0 8px"><input id="lp" type="password" autocomplete="current-password" placeholder="Senha"><div id="lerr" class="m" style="color:#c0392b;margin-top:6px"></div><div class="a" style="margin-top:10px"><button onclick="doLogin()">Entrar</button></div>`)}
+async function doLogin(){
+ const e=$('#le').value.trim(),p=$('#lp').value,er=$('#lerr');
+ if(!e||!p){er.textContent='Preencha e-mail e senha.';return}
+ er.textContent='Entrando...';fresh=true;
+ try{await CL.Au.signInWithEmailAndPassword(CL.auth,e,p)}catch(x){fresh=false;er.textContent=EM[x.code]||('Erro: '+(x.code||x.message))}
+}
+function enter(u){unlocked=true;fresh=false;try{sessionStorage.setItem('unl','1')}catch(e){}loadF('ft_'+u.uid);openApp();cloudPull()}
+function authChanged(u){
+ CL.user=u;
+ if(!u){cst='login';cloudUI();unlocked=false;entered=false;KEY=null;try{sessionStorage.removeItem('unl')}catch(e){}F={recs:[]};drawAll();loginUI();return}
+ if(KEY==='ft_'+u.uid){cloudPull();return}
+ let unl=false;try{unl=sessionStorage.getItem('unl')==='1'}catch(e){}
+ if(bioOK()&&localStorage.getItem(bioKey(u.uid))&&!unlocked&&!unl&&!fresh){showLock(u);return}
+ enter(u);
+}
+function offlineGate(){
+ if(entered)return;let l=null;try{l=JSON.parse(localStorage.getItem('fp_last'))}catch(e){}
+ if(!l){GATE('<b>Sem conexão</b><div class="m">No primeiro acesso é preciso internet para entrar.</div><div class="a" style="margin-top:10px"><button onclick="location.reload()">Tentar de novo</button></div>');return}
+ GATE(`<b>Sem internet</b><div class="m">Entrar offline como ${esc(l.email)}.</div><div class="a" style="margin-top:10px"><button onclick="offEnter()">${localStorage.getItem(bioKey(l.uid))?'👆 Desbloquear com a digital':'Continuar offline'}</button></div>`);
+}
+async function offEnter(){
+ const l=JSON.parse(localStorage.getItem('fp_last'));
+ if(localStorage.getItem(bioKey(l.uid))&&!(await bioCheck(l.uid))){alert('Digital não reconhecida.');return}
+ loadF('ft_'+l.uid);openApp();
+}
+function cloudUI(){const b=$('#cl');if(b)b.textContent=({off:'☁✖',login:'☁⚠',sync:'☁…',ok:'☁✔',err:'☁!'})[cst]||'☁'}
+async function cloudInit(){
+ if(CL)return;
+ if(!/^https?:$/.test(location.protocol)){if(!entered){loadF('ft_local');openApp()}return}
+ try{
+  const B='https://www.gstatic.com/firebasejs/'+FBV+'/';
+  const to=new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),8000));
+  const [A,Au,D]=await Promise.race([Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-database.js')]),to]);
+  const app=A.initializeApp(FBC);CL={Au,D,auth:Au.getAuth(app),db:D.getDatabase(app),user:null};
+  Au.onAuthStateChanged(CL.auth,authChanged);
+ }catch(e){CL=null;cst='off';cloudUI();offlineGate()}
+}
+async function cloudPull(){
+ if(!CL||!CL.user||!KEY)return;cst='sync';cloudUI();
+ try{
+  const v=(await CL.D.get(CL.D.ref(CL.db,'users/'+CL.user.uid+'/faltantes'))).val();
+  if(v&&v.json&&v.ts>(F.ts||0)){F=JSON.parse(v.json);F.ts=v.ts;fixF();try{localStorage.setItem(KEY,JSON.stringify(F))}catch(e){}drawAll()}
+  else if((!v&&F.recs.length)||(v&&F.ts&&F.ts>v.ts)){F.ts=F.ts||Date.now();await cloudPushNow();return}
+  cst='ok';lastSync=Date.now();
+ }catch(e){cst='err'}
+ cloudUI();
+}
+function cloudPush(){if(!CL||!CL.user)return;cst='sync';cloudUI();clearTimeout(ptm);ptm=setTimeout(cloudPushNow,1500)}
+async function cloudPushNow(){
+ if(!CL||!CL.user||!KEY)return;
+ try{await CL.D.set(CL.D.ref(CL.db,'users/'+CL.user.uid+'/faltantes'),{json:JSON.stringify(F),ts:F.ts||Date.now()});cst='ok';lastSync=Date.now()}catch(e){cst='err'}
+ cloudUI();
+}
+function cloudBtn(){
+ if(!/^https?:$/.test(location.protocol)){alert('A nuvem só funciona na versão instalada (a do GitHub). Nesta versão os dados ficam só no celular.');return}
+ if(!CL||!CL.user){alert('Sem conexão com a nuvem agora. O que você registrar fica salvo no celular e sobe quando a internet voltar.');cloudInit();return}
+ const t={ok:'Sincronizado',sync:'Sincronizando...',err:'Erro ao sincronizar',off:'Sem conexão',login:'Não conectado'}[cst];
+ if(confirm('Conta: '+CL.user.email+'\n'+t+(lastSync?' às '+ftm(lastSync):'')+'\n\nEnviar agora para a nuvem?'))cloudPushNow();
+}
+addEventListener('online',()=>{CL?cloudPull():cloudInit()});
+drawAll();cloudInit();
+</script></body></html>

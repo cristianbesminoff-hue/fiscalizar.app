@@ -1,301 +1,57 @@
 <!DOCTYPE html>
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Fiscalização</title>
-<link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b5cad">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<title>Fiscalização</title><link rel="manifest" href="manifest.json"><meta name="theme-color" content="#0b5cad">
 <style>
-*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:#f2f4f7;color:#1a1d21}
-header{position:sticky;top:0;z-index:5;background:#0b5cad;color:#fff;padding:8px}
-.r{display:flex;gap:6px;margin-bottom:6px}.r>*{flex:1;min-width:0}
-input,select,textarea{font:inherit;padding:9px;border:1px solid #ccd;border-radius:8px;width:100%}
-button{font:inherit;border:0;border-radius:8px;padding:10px;background:#0b5cad;color:#fff}
-button.s{background:#e3e8ef;color:#1a1d21}button.g{background:#1a8a4a}button.o{background:#d9822b}
-.tabs{display:flex;gap:4px}.tabs button{background:#ffffff33;flex:1;padding:8px 2px;font-size:13px}.tabs button.on{background:#fff;color:#0b5cad;font-weight:600}
-main{padding:8px;padding-bottom:40px}.c{background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0002}
-.c b{display:block}.m{color:#556;font-size:13px;margin:2px 0}.a{display:flex;gap:6px;margin-top:8px}.a button{flex:1;padding:9px 4px;font-size:14px}
-.tag{display:inline-block;background:#e3e8ef;border-radius:6px;padding:1px 6px;font-size:12px;margin-right:4px}
-#map{height:calc(100vh - 120px);border-radius:10px;display:none}
-#m{position:fixed;inset:0;background:#0007;display:none;z-index:2000;overflow:auto}
-#m>div{background:#f2f4f7;margin:16px 8px;border-radius:12px;padding:12px}
-.ch{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 10px}.ch button{background:#e3e8ef;color:#1a1d21;padding:8px 10px;font-size:13px}
-.ch button.on{background:#1a8a4a;color:#fff}.ch button.on.bad{background:#c0392b}
-.f{display:flex;justify-content:space-between;gap:8px;padding:8px;background:#fff;border-radius:8px;margin-bottom:4px;font-size:14px}
-.f span:last-child{color:#0b5cad;white-space:nowrap}h3{margin:12px 0 4px}#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}.s-pend{border-left:6px solid #0b5cad}.s-exec{border-left:6px solid #e67e22;background:#fff1e0}.s-pen{border-left:6px solid #c0392b}.s-ok{border-left:6px solid #1a8a4a}.f b{user-select:all;-webkit-user-select:all;font-size:17px}.f{padding:14px 10px}
+*{box-sizing:border-box}body{margin:0;font:16px system-ui,sans-serif;background:#f2f4f7;color:#1a1d21}
+header{background:#0b5cad;color:#fff;padding:18px 14px}header b{font-size:21px}header div{color:#d6e6f7;font-size:13px;margin-top:3px}
+main{padding:14px;display:none}.m{color:#556;font-size:13px;margin:2px 0}
+.bt{display:block;width:100%;text-align:left;border:0;border-radius:14px;padding:18px;margin-bottom:12px;background:#fff;box-shadow:0 1px 3px #0003;font:inherit;color:#1a1d21;border-left:8px solid #0b5cad}
+.bt b{display:block;font-size:19px;margin-bottom:3px}.bt span{color:#556;font-size:14px}.bt.o{border-left-color:#e67e22}.bt.g{border-left-color:#1a8a4a}
+input{font:inherit;padding:9px;border:1px solid #ccd;border-radius:8px;width:100%}
+button{font:inherit;border:0;border-radius:8px;padding:10px;background:#0b5cad;color:#fff}button.s{background:#e3e8ef;color:#1a1d21}button.g{background:#1a8a4a}
+.a{display:flex;gap:6px;margin-top:8px}.a button{flex:1}
+#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
 </style></head><body>
-<header>
- <div class="r"><button class="s" onclick="$('#file').click()">📂 Importar KML</button>
- <select id="cf" onchange="render()"></select></div>
- <div class="r"><input id="q" placeholder="Buscar nome, protocolo, endereço" oninput="render()"><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div>
- <div class="tabs" id="tabs"></div>
- <input type="file" id="file" multiple hidden>
-</header>
-<main><div id="list"></div><div id="map"></div></main>
+<header><b>Fiscalização</b><div id="who"></div></header>
+<main id="menu">
+ <button class="bt" onclick="location.href='vistoria.html'"><b>🔎 Vistoria</b><span>Protocolos, mapa, rota e execução</span></button>
+ <button class="bt o" onclick="location.href='faltantes.html'"><b>📦 Solicitação</b><span>EPIs e ferramentas faltantes, entrega e prazo</span></button>
+ <button class="bt g" onclick="location.href='kits.html'"><b>📋 Kits por setor</b><span>Listas de EPIs e ferramentas em PDF</span></button>
+ <div class="a"><button id="bio" class="s" onclick="bioToggle()" style="display:none">👆 Ativar digital</button><button id="out" class="s" onclick="CL&&CL.Au.signOut(CL.auth)">Sair da conta</button></div>
+</main>
 <div id="gate"><div class="gb" id="gc">Carregando...</div></div>
-<div id="m"><div id="mc"></div></div>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const tc=s=>s.toLowerCase().replace(/(^|\s)\S/g,m=>m.toUpperCase());
-let S={p:[],v:{},c:{},u:'',st:{},ifs:{}},KEY=null;
-const st=id=>S.st[id]||'pend';
-const META=220,mk=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
-S.m=S.m||mk();
-if(!S.cnt){S.cnt={};for(const k in S.st)if(S.st[k]==='ok'||S.st[k]==='pen')S.cnt[k]=S.st[k]}
-const save=()=>{if(!KEY)return;S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}cloudPush()};
-let tab='pend',map,layer,pos=null,cur={},curId=null;
-const TABS=[['pend','Pendentes'],['map','Mapa'],['rota','Rota']];
-const A='APROVADO',R='REPROVADO';
-const F=[['vist','6. Vistoria',['FTTH','FTTB','FTTA','FTTX']],
-['apr','7. APR',['Trabalho em altura.','Não ha atividade de risco.','Outra']],
-['ca','8. Organização da C.A',[A,R]],['drop','11. Lançamento do drop',[A,R]],
-['poste','13. Ancoragem no poste',[A,R,'N/A (FTTA)']],['pim','15. Ancoragem no pimentão',[A,R,'N/A (FTTA/subterraneo)']],
-['acab','17. Acabamento do drop',[A,R]],['dg','19. Organização do DG',[A,R,'N/A']],
-['fin','21. Situação final',[A,'PENDENCIA-REFAZER']]];
-const nav=p=>`https://www.google.com/maps/dir/?api=1&destination=${p.lat},${p.lng}&travelmode=driving`;
-const dist=(a,b)=>{const k=Math.PI/180,x=(b.lng-a.lng)*k*Math.cos((a.lat+b.lat)*k/2),y=(b.lat-a.lat)*k;return Math.hypot(x,y)*6371};
-
-$('#file').onchange=async e=>{
- const fs=[...e.target.files];if(!fs.length)return;
- const old=new Map(S.p.map(p=>[p.id,p]));let n=0,dp=0,sk=0;
- for(const f of fs){
-  const x=new DOMParser().parseFromString(await f.text(),'text/xml');
-  for(const pm of x.getElementsByTagName('Placemark')){
-   const d={};for(const el of pm.getElementsByTagName('Data'))d[el.getAttribute('name')]=(el.getElementsByTagName('value')[0]||{}).textContent||'';
-   const co=(pm.getElementsByTagName('coordinates')[0]||{}).textContent;if(!co||!d.Protocolo)continue;
-   const [lng,lat]=co.trim().split(',').map(Number);
-   const cp=(d.Cidade||'').split('-');const uf=cp.length>1?cp.pop():'';
-   const nm=pm.getElementsByTagName('n')[0]||pm.getElementsByTagName('name')[0];
-   const p={id:d.Protocolo,nome:nm?nm.textContent:'',emp:d['Empresa'],tec:d['Técnico'],cid:tc(cp.join('-').trim()),uf,end:d['Endereço'],serv:d['Serviço'],data:d['Data Finalizado'],lat,lng};
-   if(S.ex[p.id]||S.done[p.id]){sk++;continue}
-   if(old.has(p.id))dp++;else n++;old.set(p.id,p);
-  }
- }
- S.p=[...old.values()];save();fill();render();e.target.value='';
- alert(n+' novos somados.\n'+dp+' já estavam no mapa (não duplicou).\n'+sk+' ignorados (excluídos ou já concluídos).\nTotal no mapa: '+S.p.length);
-};
-
-function fill(){
- const cs=[...new Set(S.p.map(p=>p.cid))].sort(),v=$('#cf').value;
- $('#cf').innerHTML='<option value="">Todas as cidades</option>'+cs.map(c=>`<option ${c===v?'selected':''}>${esc(c)}</option>`).join('');
-}
-function items(m){
- const c=$('#cf').value,q=$('#q').value.toLowerCase();
- return S.p.filter(p=>(m==='todo'?(st(p.id)==='pend'||st(p.id)==='exec'):m==='done'?(st(p.id)==='ok'||st(p.id)==='pen'):st(p.id)!=='ok')&&(!c||p.cid===c)&&(!q||(p.nome+p.id+p.end).toLowerCase().includes(q)))
-  .sort((a,b)=>a.cid.localeCompare(b.cid)||a.nome.localeCompare(b.nome));
-}
-const LB={pend:'',exec:'⏳ em execução',pen:'⚠ pendência',ok:'✔ ok'};
-function card(p){
- const t=st(p.id);
- return `<div class="c s-${t}" data-id="${p.id}"><b>${esc(p.nome)}</b>
- <div class="m">${esc(p.end)} · ${esc(p.cid)}-${esc(p.uf)}</div>
- <div class="m"><span class="tag">${esc(p.serv)}</span><span class="tag">${esc(p.id)}</span>${LB[t]?`<span class="tag">${LB[t]}</span>`:''}</div>
- <div class="a"><button data-a="nav">🧭 Navegar</button>${t==='ok'?'<button class="s" data-a="undo">Desfazer</button>':'<button class="o" data-a="run">▶ Executar</button>'}${t==='pend'?'<button data-a="del" style="flex:0 0 46px;background:#c0392b">✖</button>':''}</div></div>`;
-}
-function gauge(){
- const v=Object.values(S.cnt),n=v.length,ok=v.filter(x=>x==='ok').length,pen=n-ok,pc=Math.min(n/META,1),a=-90+180*pc;
- return `<div class="c" style="display:flex;align-items:center;gap:10px"><svg viewBox="0 0 120 72" width="130"><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="#e3e8ef" stroke-width="10" stroke-linecap="round"/><path d="M10 62 A50 50 0 0 1 110 62" fill="none" stroke="${pc>=1?'#1a8a4a':'#e67e22'}" stroke-width="10" stroke-linecap="round" pathLength="100" stroke-dasharray="${pc*100} 100"/><g transform="rotate(${a} 60 62)"><line x1="60" y1="62" x2="60" y2="22" stroke="#c0392b" stroke-width="3" stroke-linecap="round"/></g><circle cx="60" cy="62" r="5" fill="#333"/><text x="4" y="71" font-size="9">E</text><text x="108" y="71" font-size="9">F</text></svg>
- <div><div style="font-size:28px;font-weight:700">⛽ ${n}<span style="font-size:16px;color:#556"> / ${META}</span></div><div class="m">${ok} OK · ${pen} pendência${pen==1?'':'s'}<br>faltam ${Math.max(META-n,0)}</div></div></div>`;
-}
-const pe=t=>String(t).replace(/[\\()]/g,'\\$&');
-function mkpdf(title,sub,rows){
- const PER=90,pages=[];
- for(let i=0;i<rows.length||!pages.length;i+=PER){
-  let c='BT /F1 14 Tf 50 805 Td ('+pe(title)+') Tj ET\nBT /F1 10 Tf 50 788 Td ('+pe(sub+' - pag. '+(pages.length+1))+') Tj ET\n';
-  rows.slice(i,i+PER).forEach((r,k)=>{c+='BT /F1 10 Tf '+(50+(k<45?0:260))+' '+(765-(k%45)*15)+' Td ('+pe(r)+') Tj ET\n'});
-  pages.push(c);
- }
- const o=['<</Type/Catalog/Pages 2 0 R>>',null,'<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>'],kids=[];
- pages.forEach((c,i)=>{const n=4+i*2;kids.push(n+' 0 R');o[n-1]='<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 3 0 R>>>>/Contents '+(n+1)+' 0 R>>';o[n]='<</Length '+c.length+'>>\nstream\n'+c+'endstream'});
- o[1]='<</Type/Pages/Kids['+kids.join(' ')+']/Count '+pages.length+'>>';
- let out='%PDF-1.4\n';const off=[];
- o.forEach((b,i)=>{off.push(out.length);out+=(i+1)+' 0 obj\n'+b+'\nendobj\n'});
- const x=out.length;
- out+='xref\n0 '+(o.length+1)+'\n0000000000 65535 f \n'+off.map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<</Size '+(o.length+1)+'/Root 1 0 R>>\nstartxref\n'+x+'\n%%EOF';
- const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
- return new Blob([u],{type:'application/pdf'});
-}
-function pdfMes(){
- const e=Object.entries(S.cnt);if(!e.length){alert('Nenhum protocolo fiscalizado neste mês ainda.');return}
- const ok=e.filter(x=>x[1]==='ok').length,pen=e.length-ok;
- const b=mkpdf('Protocolos fiscalizados - '+S.m,'Total: '+e.length+' protocolos',e.map(([id],i)=>(i+1)+'.  '+id+'   '+((S.dt||{})[id]||'-')));
- const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='fiscalizacao-'+S.m+'.pdf';document.body.appendChild(a);a.click();a.remove();
-}
-function excl(id){
- const p=S.p.find(x=>x.id===id);if(!p||!confirm('Excluir "'+p.nome+'" do mapa e da lista? Dá pra restaurar depois.'))return;
- S.ex[id]=p;S.p=S.p.filter(x=>x.id!==id);delete S.st[id];save();fill();render();
-}
-function restaurar(id){const p=S.ex[id];if(!p)return;S.p.push(p);delete S.ex[id];save();fill();render()}
-function exHtml(){
- const e=Object.values(S.ex);if(!e.length)return '';
- return `<details class="c"><summary><b>Excluídos</b> · ${e.length}</summary><div style="margin-top:8px">`+e.map(p=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #eee"><span><b>${esc(p.nome)}</b><div class="m">${esc(p.cid)} · ${esc(p.id)}</div></span><button class="s" style="flex:0 0 auto" onclick="restaurar('${esc(p.id)}')">Restaurar</button></div>`).join('')+'</div></details>';
-}
-function ifsNovo(){
- $('#mc').innerHTML=`<b>Nova fiscalização IFS</b><div class="m">Data e horário são salvos automaticamente.</div><input id="ifn" inputmode="numeric" placeholder="Número do protocolo" style="margin:8px 0"><div class="a"><button class="g" onclick="ifsSalvar('ok')">✅ OK</button><button style="background:#c0392b" onclick="ifsSalvar('pen')">❌ Não OK</button></div><div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="$('#m').style.display='none';return false">cancelar</a></div>`;
- $('#m').style.display='block';
-}
-function ifsSalvar(r){
- const n=$('#ifn').value.trim().replace(/[^\w-]/g,'');if(!n){alert('Digite o número do protocolo.');return}
- const k='IFS-'+n;
- if(S.ifs[k]&&!confirm('Esse protocolo IFS já foi lançado. Substituir?'))return;
- const d=new Date();S.ifs[k]={id:n,r,t:d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})};
- S.cnt[k]=r;S.dt=S.dt||{};S.dt[k]=d.toLocaleDateString('pt-BR');
- save();$('#m').style.display='none';render();
-}
-function ifsDel(k){
- if(!confirm('Excluir este lançamento IFS?'))return;
- delete S.ifs[k];delete S.cnt[k];if(S.dt)delete S.dt[k];save();render();
-}
-function zerar(){
- if(!confirm('Zerar o aplicativo? Apaga TODOS os protocolos, marcações, contador e histórico. O link do Forms continua salvo.'))return;
- if(!confirm('Tem certeza? Não dá pra desfazer.'))return;
- const u=S.u;S={p:[],v:{},c:{},u,st:{},cnt:{},dt:{},h:{},ifs:{},ex:{},done:{},m:mk()};
- $('#m').style.display='none';save();fill();render();
-}
-function virar(){
- const v=Object.values(S.cnt),ok=v.filter(x=>x==='ok').length,pen=v.length-ok;
- if(!confirm(`Virar o mês? Fecha ${S.m} com ${ok} OK e ${pen} pendência(s). Os OK saem da lista; as pendências e o que não foi feito continuam. O PDF do mês será baixado.`))return;
- pdfMes();
- S.h=S.h||{};S.h[S.m]={ok,pen};
- S.p.forEach(p=>{if(st(p.id)==='ok')S.done[p.id]=1});S.p=S.p.filter(p=>st(p.id)!=='ok');for(const k in S.st)if(S.st[k]==='ok')delete S.st[k];
- S.cnt={};S.dt={};S.ifs={};S.m=mk();S.last=null;save();fill();render();
-}
-function render(){
- $('#tabs').innerHTML=TABS.map(([k,l])=>`<button class="${k===tab?'on':''}" onclick="tab='${k}';render()">${l}</button>`).join('');
- const L=$('#list'),M=$('#map');
- M.style.display=tab==='map'?'block':'none';L.style.display=tab==='map'?'none':'block';
- if(!S.p.length&&!Object.keys(S.cnt).length){L.innerHTML='<div class="c">Toque em <b>Importar KML</b> para carregar os protocolos.</div>';return}
- if(tab==='pend'){
-  const it=items('todo'),dn=items('done');
-  const bn=S.m!==mk()?`<div class="c s-exec"><b>📅 Virou o mês</b><div class="m">Feche ${S.m} e comece de novo.</div><div class="a"><button class="o" onclick="virar()">Virar o mês</button></div></div>`:'';
-  const iv=Object.values(S.ifs),kok=dn.filter(p=>st(p.id)==='ok').length,ok=kok+iv.filter(v=>v.r==='ok').length,pen=dn.length-kok+iv.filter(v=>v.r==='pen').length;
-  const ifl=Object.entries(S.ifs).map(([k,v])=>`<div class="c s-${v.r}"><b>IFS · ${esc(v.id)}</b><div class="m"><span class="tag">IFS</span><span class="tag">${v.r==='ok'?'✔ ok':'⚠ não ok'}</span>${esc((S.dt||{})[k]||'')} ${esc(v.t)}</div><div class="a"><button class="s" onclick="ifsDel('${k}')">Excluir</button></div></div>`).join('');
-  const hist=Object.entries(S.h||{}).sort().reverse().map(([k,v])=>k+': '+v.ok+' OK, '+v.pen+' pend.').join('<br>');
-  L.innerHTML=bn+gauge()+`<div class="m" style="margin:2px 4px 8px">${it.length} a fazer</div>`+(it.map(card).join('')||'<div class="c">Nada a fazer. 🎉</div>')+
-   `<details class="c"><summary><b>Concluídos</b> · ${ok} OK · ${pen} pendência${pen==1?'':'s'}</summary><div style="margin-top:8px">${ifl}${dn.map(card).join('')}</div></details>`+exHtml()+
-   `<div class="c"><div class="a"><button class="o" onclick="ifsNovo()">➕ Fiscalização IFS</button></div><div class="a" style="margin-top:6px"><button class="s" onclick="pdfMes()">📄 PDF do mês</button><button class="s" onclick="virar()">📅 Virar o mês</button></div><div class="a"><button style="background:#c0392b" onclick="zerar()">🗑 Zerar aplicativo</button></div><div class="m" style="margin-top:6px">${hist}</div></div>`;
- }else if(tab==='map')drawMap();
- else drawRota();
-}
-function drawMap(){
- if(typeof L==='undefined'){$('#map').innerHTML='<div class="c">Mapa precisa de internet.</div>';return}
- if(!map){map=L.map('map');L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(map);layer=L.layerGroup().addTo(map)}
- layer.clearLayers();const it=items();
- it.forEach(p=>L.circleMarker([p.lat,p.lng],{radius:9,color:'#fff',weight:2,fillOpacity:.95,fillColor:({exec:'#e67e22',pen:'#c0392b'})[st(p.id)]||'#0b5cad'})
-  .bindPopup(`<b>${esc(p.nome)}</b><br>${esc(p.end)}<br><a href="${nav(p)}" target="_blank">🧭 Navegar</a>${st(p.id)==='pend'?` · <a href="#" onclick="excl('${p.id}');return false">✖ Excluir</a>`:''}`).addTo(layer));
- setTimeout(()=>{map.invalidateSize();if(it.length)map.fitBounds(it.map(p=>[p.lat,p.lng]),{padding:[30,30]})},50);
-}
-function drawRota(){
- const c=$('#cf').value,L=$('#list');
- if(!c){L.innerHTML='<div class="c">Escolha uma <b>cidade</b> no filtro acima para montar a rota do dia.</div>';return}
- let left=S.p.filter(p=>p.cid===c&&st(p.id)!=='ok');
- if(!left.length){L.innerHTML='<div class="c">Nenhum pendente em '+esc(c)+'. 🎉</div>';return}
- let at=pos,order=[];
- if(!at){at=left[0]}
- while(left.length){let bi=0,bd=1e9;left.forEach((p,i)=>{const d=dist(at,p);if(d<bd){bd=d;bi=i}});at=left.splice(bi,1)[0];order.push(at)}
- let h=`<div class="c"><button class="s" style="width:100%" onclick="geo()">📍 ${pos?'Localização usada ✔ (atualizar)':'Começar perto de mim'}</button></div>`;
- for(let i=0;i<order.length;i+=9){
-  const b=order.slice(i,i+9),last=b[b.length-1],way=b.slice(0,-1).map(p=>p.lat+','+p.lng).join('|');
-  const u=`https://www.google.com/maps/dir/?api=1&destination=${last.lat},${last.lng}${way?'&waypoints='+encodeURIComponent(way):''}&travelmode=driving`;
-  h+=`<div class="c"><b>Lote ${i/9+1} · ${b.length} paradas</b><div class="m">${b.map((p,j)=>(i+j+1)+'. '+esc(p.nome)).join('<br>')}</div>
-  <div class="a"><button onclick="window.open('${u}','_blank')">🧭 Abrir lote no Maps</button></div></div>`;
- }
- L.innerHTML=h;
-}
-function geo(){navigator.geolocation.getCurrentPosition(g=>{pos={lat:g.coords.latitude,lng:g.coords.longitude};render()},()=>alert('Não consegui a localização. Ative o GPS e permita o acesso.'),{enableHighAccuracy:true,timeout:15000})}
-
-$('#list').onclick=e=>{
- const b=e.target.closest('button[data-a]');if(!b)return;
- const id=b.closest('.c').dataset.id,p=S.p.find(x=>x.id===id),a=b.dataset.a;
- if(a==='nav')window.open(nav(p),'_blank');
- else if(a==='del')excl(id);
- else if(a==='undo'){delete S.st[id];delete S.cnt[id];if(S.dt)delete S.dt[id];save();render()}
- else{if(st(id)!=='exec'){S.pv=S.pv||{};S.pv[id]=S.st[id]||''}S.st[id]='exec';save();render();openChk(id)}
-};
-let rowsCur=[];
-function copy(t){
- try{const a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;top:0;left:0;width:1px;height:1px;opacity:.01';document.body.appendChild(a);a.focus();a.select();a.setSelectionRange(0,t.length);const ok=document.execCommand('copy');a.remove();return ok}catch(e){return false}
-}
-async function cp(t,el){
- let ok=false;
- if(navigator.clipboard){try{await navigator.clipboard.writeText(t);ok=true}catch(e){}}
- if(!ok)ok=copy(t);
- if(ok)el.querySelector('.st').textContent='copiado ✔';
- else prompt('Não consegui copiar sozinho. Segure sobre o texto, selecione tudo e copie:',t);
-}
-function openChk(id){
- curId=id;const p=S.p.find(x=>x.id===id);
- rowsCur=[['1. Estado',p.uf],['2. Cidade',p.cid],['3. Protocolo',p.id],['4. Empresa',p.emp],['5. Técnico',p.tec]];S.last=id;save();
- $('#mc').innerHTML=`<b>${esc(p.nome)}</b><div class="m">Toque em cada campo para copiar.</div>`+
- rowsCur.map(([l,v],i)=>`<div class="f" data-i="${i}"><span>${l}<br><b>${esc(v)}</b></span><span class="st">copiar</span></div>`).join('')+
- `<div class="a"><button class="o" onclick="openForms()">📋 Abrir Forms</button></div>
- <h3>Resultado da fiscalização</h3>
- <div class="a"><button class="g" onclick="finish('ok')">✅ OK</button><button style="background:#c0392b" onclick="finish('pen')">⚠ Pendência</button></div>
- <div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="finish('cancel');return false">foi engano, cancelar</a></div>`;
- $('#m').style.display='block';
-}
-$('#mc').onclick=e=>{const f=e.target.closest('.f');if(f)cp(rowsCur[f.dataset.i][1],f)};
-function finish(r){
- if(r==='cancel'){const pv=(S.pv||{})[curId];if(pv)S.st[curId]=pv;else delete S.st[curId]}
- else{S.st[curId]=r;S.cnt[curId]=r;S.dt=S.dt||{};S.dt[curId]=new Date().toLocaleDateString('pt-BR')}
- S.last=null;save();$('#m').style.display='none';render();
-}
-function openForms(){
- if(!S.u){const u=prompt('Cole o link do formulário (só precisa uma vez):');if(!u)return;S.u=u;save()}
- window.open(S.u,'_blank');
-}
-
-
-/* ===== Login + Firebase (nuvem) ===== */
 const FBV='10.14.1',FBC={apiKey:"AIzaSyDVK9Xo4URV_hbG133RMhjyiAiCkqLBT4k",authDomain:"vistoria-ftta.firebaseapp.com",databaseURL:"https://vistoria-ftta-default-rtdb.firebaseio.com",projectId:"vistoria-ftta",storageBucket:"vistoria-ftta.firebasestorage.app",messagingSenderId:"470874503323",appId:"1:470874503323:web:4739909f2deca9c311ee3e"};
-let CL=null,cst='off',ptm=null,lastSync=0,entered=false,unlocked=false,fresh=false;
+let CL=null,entered=false,unlocked=false,fresh=false;
 const EM={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/user-not-found':'E-mail ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Espere um pouco.','auth/network-request-failed':'Sem internet.','auth/user-disabled':'Conta desativada.'};
-function norm(){S.p=S.p||[];S.v=S.v||{};S.c=S.c||{};S.st=S.st||{};S.ifs=S.ifs||{};S.cnt=S.cnt||{};S.dt=S.dt||{};S.h=S.h||{};S.m=S.m||mk();S.u=S.u||'';S.ex=S.ex||{};S.done=S.done||{}}
-function initS(raw){
- S=raw||{p:[],v:{},c:{},u:''};S.st=S.st||{};S.ifs=S.ifs||{};for(const k in S.v)S.st[k]=S.st[k]||'ok';S.v={};S.m=S.m||mk();
- if(!S.cnt){S.cnt={};for(const k in S.st)if(S.st[k]==='ok'||S.st[k]==='pen')S.cnt[k]=S.st[k]}
- norm();fill();render();
-}
-const hasData=()=>S.p.length||Object.keys(S.cnt).length||Object.keys(S.ifs).length;
 const GATE=h=>{$('#gc').innerHTML=h;$('#gate').style.display='flex'};
-function openApp(){entered=true;$('#gate').style.display='none'}
-function loadUser(uid,email){
- KEY='fp_'+uid;let raw=null;
- try{raw=JSON.parse(localStorage.getItem(KEY))}catch(e){}
- if(!raw){try{const lg=localStorage.getItem('fp');if(lg){raw=JSON.parse(lg);localStorage.setItem(KEY,lg);localStorage.removeItem('fp')}}catch(e){}}
- initS(raw);try{localStorage.setItem('fp_last',JSON.stringify({uid,email}))}catch(e){}
- if(S.last&&S.p.find(x=>x.id===S.last))openChk(S.last);
+const bioKey=u=>'bio_'+u,bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials&&location.protocol==='https:');
+const b64=x=>btoa(String.fromCharCode(...new Uint8Array(x))),unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+function openApp(email){
+ entered=true;$('#gate').style.display='none';$('#menu').style.display='block';
+ $('#who').textContent=email||'Modo local (sem login)';$('#out').style.display=CL&&CL.user?'block':'none';updBio();
 }
-function localMode(){KEY='fp';let raw=null;try{raw=JSON.parse(localStorage.getItem('fp'))}catch(e){}initS(raw);openApp();cloudUI()}
-/* digital (WebAuthn): trava local do app */
-const bioKey=u=>'bio_'+u;
-const bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials&&location.protocol==='https:');
-const b64=x=>btoa(String.fromCharCode(...new Uint8Array(x)));
-const unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+function updBio(){const b=$('#bio'),u=CL&&CL.user;b.style.display=u&&bioOK()?'block':'none';if(u)b.textContent=localStorage.getItem(bioKey(u.uid))?'👆 Desativar digital':'👆 Ativar digital'}
 async function bioEnable(u){
  try{
   const c=await navigator.credentials.create({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),rp:{name:'Fiscalização'},user:{id:new TextEncoder().encode(u.uid).slice(0,64),name:u.email,displayName:u.email},pubKeyCredParams:[{type:'public-key',alg:-7},{type:'public-key',alg:-257}],authenticatorSelection:{authenticatorAttachment:'platform',userVerification:'required',residentKey:'discouraged'},timeout:60000}});
   localStorage.setItem(bioKey(u.uid),b64(c.rawId));return true;
  }catch(e){return false}
 }
-async function bioCheck(uid){
- try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(localStorage.getItem(bioKey(uid)))}],userVerification:'required',timeout:60000}});return true}catch(e){return false}
+async function bioCheck(uid){try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(localStorage.getItem(bioKey(uid)))}],userVerification:'required',timeout:60000}});return true}catch(e){return false}}
+async function bioGo(){if(!(await bioEnable(CL.user)))alert('Não consegui ativar a digital neste aparelho.');skipBio()}
+function skipBio(){unlocked=true;try{sessionStorage.setItem('unl','1')}catch(e){}openApp(CL.user.email)}
+function bioToggle(){
+ const u=CL.user;
+ if(localStorage.getItem(bioKey(u.uid))){localStorage.removeItem(bioKey(u.uid));updBio();alert('Digital desativada.')}
+ else bioEnable(u).then(ok=>{updBio();alert(ok?'Digital ativada.':'Não consegui ativar a digital neste aparelho.')});
 }
-async function bioGo(){
- if(!(await bioEnable(CL.user)))alert('Não consegui ativar a digital neste aparelho.');
- enter(CL.user);
-}
-async function bioUnlock(){
- const u=CL&&CL.user;if(!u)return;
- if(await bioCheck(u.uid))enter(u);else{const e=$('#lerr');if(e)e.textContent='Digital não reconhecida. Tente de novo.'}
-}
-function showLock(u){
- GATE(`<b>Fiscalização de Protocolos</b><div class="m">${esc(u.email)}</div><div class="a" style="margin-top:12px"><button class="g" onclick="bioUnlock()">👆 Desbloquear com a digital</button></div><div id="lerr" class="m" style="color:#c0392b;margin-top:8px"></div><div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="CL.Au.signOut(CL.auth);return false">usar outra conta</a></div>`);
-}
-function loginUI(){
- GATE(`<b>Fiscalização de Protocolos</b><div class="m">Entre com seu e-mail e senha.</div><input id="le" type="email" autocomplete="username" placeholder="E-mail" style="margin:10px 0 8px"><input id="lp" type="password" autocomplete="current-password" placeholder="Senha"><div id="lerr" class="m" style="color:#c0392b;margin-top:6px"></div><div class="a" style="margin-top:10px"><button onclick="doLogin()">Entrar</button></div>`);
-}
+async function bioUnlock(){const u=CL&&CL.user;if(!u)return;if(await bioCheck(u.uid))skipBio();else{const e=$('#lerr');if(e)e.textContent='Digital não reconhecida. Tente de novo.'}}
+function showLock(u){GATE(`<b>Fiscalização</b><div class="m">${esc(u.email)}</div><div class="a" style="margin-top:12px"><button class="g" onclick="bioUnlock()">👆 Desbloquear com a digital</button></div><div id="lerr" class="m" style="color:#c0392b;margin-top:8px"></div><div class="m" style="text-align:center;margin-top:10px"><a href="#" onclick="CL.Au.signOut(CL.auth);return false">usar outra conta</a></div>`)}
+function loginUI(){GATE(`<b>Fiscalização</b><div class="m">Entre com seu e-mail e senha.</div><input id="le" type="email" autocomplete="username" placeholder="E-mail" style="margin:10px 0 8px"><input id="lp" type="password" autocomplete="current-password" placeholder="Senha"><div id="lerr" class="m" style="color:#c0392b;margin-top:6px"></div><div class="a" style="margin-top:10px"><button onclick="doLogin()">Entrar</button></div>`)}
 async function doLogin(){
  const e=$('#le').value.trim(),p=$('#lp').value,er=$('#lerr');
  if(!e||!p){er.textContent='Preencha e-mail e senha.';return}
@@ -303,74 +59,43 @@ async function doLogin(){
  try{await CL.Au.signInWithEmailAndPassword(CL.auth,e,p)}catch(x){fresh=false;er.textContent=EM[x.code]||('Erro: '+(x.code||x.message))}
 }
 function enter(u){
- unlocked=true;
+ try{localStorage.setItem('fp_last',JSON.stringify({uid:u.uid,email:u.email}))}catch(e){}
  if(fresh&&bioOK()&&!localStorage.getItem(bioKey(u.uid))){
   fresh=false;
-  GATE(`<b>Ativar a digital?</b><div class="m">Nas próximas vezes você abre o app só com a digital. Vale só para este aparelho.</div><div class="a" style="margin-top:12px"><button class="s" onclick="enter(CL.user)">Agora não</button><button class="g" onclick="bioGo()">Ativar</button></div>`);
+  GATE(`<b>Ativar a digital?</b><div class="m">Nas próximas vezes você abre o app só com a digital. Vale só para este aparelho.</div><div class="a" style="margin-top:12px"><button class="s" onclick="skipBio()">Agora não</button><button class="g" onclick="bioGo()">Ativar</button></div>`);
   return;
  }
- fresh=false;loadUser(u.uid,u.email);openApp();cloudPull();
+ fresh=false;skipBio();
 }
 function authChanged(u){
  CL.user=u;
- if(!u){cst='login';cloudUI();unlocked=false;entered=false;KEY=null;initS(null);loginUI();return}
- if(KEY==='fp_'+u.uid){cloudPull();return}
- if(bioOK()&&localStorage.getItem(bioKey(u.uid))&&!unlocked&&!fresh){showLock(u);return}
+ if(!u){unlocked=false;entered=false;try{sessionStorage.removeItem('unl')}catch(e){}$('#menu').style.display='none';loginUI();return}
+ if(entered){updBio();return}
+ let unl=false;try{unl=sessionStorage.getItem('unl')==='1'}catch(e){}
+ if(bioOK()&&localStorage.getItem(bioKey(u.uid))&&!unlocked&&!unl&&!fresh){showLock(u);return}
  enter(u);
 }
 function offlineGate(){
  if(entered)return;let l=null;try{l=JSON.parse(localStorage.getItem('fp_last'))}catch(e){}
  if(!l){GATE('<b>Sem conexão</b><div class="m">No primeiro acesso é preciso internet para entrar.</div><div class="a" style="margin-top:10px"><button onclick="location.reload()">Tentar de novo</button></div>');return}
- GATE(`<b>Sem internet</b><div class="m">Entrar offline como ${esc(l.email)}. Os dados ficam no celular e sobem quando a conexão voltar.</div><div class="a" style="margin-top:10px"><button onclick="offEnter()">${localStorage.getItem(bioKey(l.uid))?'👆 Desbloquear com a digital':'Continuar offline'}</button></div>`);
+ GATE(`<b>Sem internet</b><div class="m">Entrar offline como ${esc(l.email)}.</div><div class="a" style="margin-top:10px"><button onclick="offEnter()">${localStorage.getItem(bioKey(l.uid))?'👆 Desbloquear com a digital':'Continuar offline'}</button></div>`);
 }
 async function offEnter(){
  const l=JSON.parse(localStorage.getItem('fp_last'));
  if(localStorage.getItem(bioKey(l.uid))&&!(await bioCheck(l.uid))){alert('Digital não reconhecida.');return}
- loadUser(l.uid,l.email);openApp();
+ try{sessionStorage.setItem('unl','1')}catch(e){}openApp(l.email);
 }
-function cloudUI(){const b=$('#cl');if(b)b.textContent=({off:'☁✖',login:'☁⚠',sync:'☁…',ok:'☁✔',err:'☁!'})[cst]||'☁'}
 async function cloudInit(){
  if(CL)return;
- if(!/^https?:$/.test(location.protocol)){if(!entered)localMode();return}
+ if(!/^https?:$/.test(location.protocol)){if(!entered)openApp(null);return}
  try{
   const B='https://www.gstatic.com/firebasejs/'+FBV+'/';
   const to=new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),8000));
-  const [A,Au,D]=await Promise.race([Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-database.js')]),to]);
-  const app=A.initializeApp(FBC);CL={Au,D,auth:Au.getAuth(app),db:D.getDatabase(app),user:null};
+  const [A,Au]=await Promise.race([Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js')]),to]);
+  const app=A.initializeApp(FBC);CL={Au,auth:Au.getAuth(app),user:null};
   Au.onAuthStateChanged(CL.auth,authChanged);
- }catch(e){CL=null;cst='off';cloudUI();offlineGate()}
+ }catch(e){CL=null;offlineGate()}
 }
-async function cloudPull(){
- if(!CL||!CL.user||!KEY)return;cst='sync';cloudUI();
- try{
-  const v=(await CL.D.get(CL.D.ref(CL.db,'users/'+CL.user.uid+'/state'))).val();
-  if(v&&v.json&&v.ts>(S.ts||0)){const R=JSON.parse(v.json);R.ts=v.ts;S=R;norm();try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}fill();render()}
-  else if((!v&&hasData())||(v&&S.ts&&S.ts>v.ts)){S.ts=S.ts||Date.now();await cloudPushNow();return}
-  cst='ok';lastSync=Date.now();
- }catch(e){cst='err'}
- cloudUI();
-}
-function cloudPush(){if(!CL||!CL.user)return;cst='sync';cloudUI();clearTimeout(ptm);ptm=setTimeout(cloudPushNow,1500)}
-async function cloudPushNow(){
- if(!CL||!CL.user||!KEY)return;
- try{const o={...S};delete o.last;await CL.D.set(CL.D.ref(CL.db,'users/'+CL.user.uid+'/state'),{json:JSON.stringify(o),ts:S.ts||Date.now()});cst='ok';lastSync=Date.now()}catch(e){cst='err'}
- cloudUI();
-}
-function bioToggle(){
- const u=CL.user;
- if(localStorage.getItem(bioKey(u.uid))){localStorage.removeItem(bioKey(u.uid));$('#m').style.display='none';alert('Digital desativada.')}
- else bioEnable(u).then(ok=>{$('#m').style.display='none';alert(ok?'Digital ativada.':'Não consegui ativar a digital neste aparelho.')});
-}
-function cloudBtn(){
- if(!/^https?:$/.test(location.protocol)){alert('A nuvem e o login só funcionam na versão instalada (a do GitHub). Nesta versão os dados ficam só no celular.');return}
- if(!CL||!CL.user){alert('Sem conexão com a nuvem agora. O que você marcar fica salvo no celular e sobe quando a internet voltar.');cloudInit();return}
- const t={ok:'Sincronizado',sync:'Sincronizando...',err:'Erro ao sincronizar',off:'Sem conexão',login:'Não conectado'}[cst];
- $('#mc').innerHTML=`<b>Conta</b><div class="m">${esc(CL.user.email)}<br>${t}${lastSync?' às '+new Date(lastSync).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}</div><div class="a"><button class="s" onclick="$('#m').style.display='none'">Fechar</button><button class="g" onclick="cloudPushNow();$('#m').style.display='none'">Enviar agora</button></div>${bioOK()?`<div class="a" style="margin-top:6px"><button class="s" onclick="bioToggle()">${localStorage.getItem(bioKey(CL.user.uid))?'Desativar digital':'Ativar digital'}</button></div>`:''}<div class="a" style="margin-top:6px"><button style="background:#c0392b" onclick="$('#m').style.display='none';CL.Au.signOut(CL.auth)">Sair da conta</button></div>`;
- $('#m').style.display='block';
-}
-addEventListener('online',()=>{CL?cloudPull():cloudInit()});
-
-fill();render();
+addEventListener('online',()=>{if(!CL)cloudInit()});
 cloudInit();
-if('serviceWorker' in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script></body></html>

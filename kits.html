@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kits por setor</title><meta name="theme-color" content="#0b5cad">
+<style>
+*{box-sizing:border-box}body{margin:0;font:15px system-ui,sans-serif;background:#f2f4f7;color:#1a1d21}
+header{position:sticky;top:0;z-index:5;background:#0b5cad;color:#fff;padding:8px}
+.r{display:flex;gap:6px;margin-bottom:6px}.r>*{flex:1;min-width:0}
+input{font:inherit;padding:9px;border:1px solid #ccd;border-radius:8px;width:100%}
+button{font:inherit;border:0;border-radius:8px;padding:10px;background:#0b5cad;color:#fff}
+button.s{background:#e3e8ef;color:#1a1d21}button.g{background:#1a8a4a}button.o{background:#d9822b}
+main{padding:8px;padding-bottom:120px}.c{background:#fff;border-radius:10px;padding:10px;margin-bottom:8px;box-shadow:0 1px 2px #0002}
+.m{color:#556;font-size:13px;margin:2px 0}.a{display:flex;gap:6px;margin-top:8px}.a button{flex:1}
+.ch{display:flex;gap:6px;margin-top:8px}.ch button{flex:1;background:#e3e8ef;color:#1a1d21;padding:8px 2px;line-height:1.2}.ch button.on{background:#0b5cad;color:#fff}
+.sh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 4px}.sh a{color:#0b5cad;font-size:13px}#bar{position:fixed;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -2px 8px #0003;padding:8px;z-index:4}
+table{width:100%;border-collapse:collapse}td{padding:10px 8px;border-bottom:1px solid #eef}tr.sl{background:#e8f6ee}.bx{width:36px;font-size:21px;color:#1a8a4a;text-align:center}
+#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
+</style></head><body>
+<header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Kits por setor</b></header>
+<main>
+<div class="c"><b>Setor do kit</b>
+ <div class="ch" id="tabs"></div>
+ <div class="r" style="margin-top:8px"><input id="q" placeholder="Digite as letras para buscar" oninput="drawAll()" autocomplete="off"></div>
+ <div class="m">Toque nos itens para marcar. No fim, baixe o PDF.</div></div>
+<div class="c" id="its"></div>
+</main>
+<div id="bar"><div class="m" id="cnt"></div><div class="a" style="margin-top:4px"><button class="s" onclick="pdfKit('ambos')">Rede + Ativação</button><button class="g" onclick="pdfKit(setor)">📄 Baixar PDF</button></div></div>
+<div id="gate"><div class="gb" id="gc">Carregando...</div></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nz=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
+const fd=t=>new Date(t).toLocaleDateString('pt-BR'),ftm=t=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+const EPIS=["Óculos Escuros", "Óculos Transparente", "Capacete", "Cinto Paraquedista", "Talabarte de Posicionamento","Trava Quedas", "Luva Isolante", "Luva de Cobertura", "Luva de Vaqueta", "Detector de Tensão", "Eureka", "Corda Linha de Vida", "Fita Catraca", "Fita de Ancoragem 1,20", "Fita de Ancoragem 0,80", "Calça Antichama", "Jaleco Antichama", "Camisa", "Botina", "Escada", "Cones", "Outro EPI"],FERR=["Alicate de Corte", "Alicate Universal", "Alicate de Bico", "Chave BAP", "Chave de Guarita", "Chave Philips P", "Chave Philips M", "Chave Philips G", "Chave de Fenda P", "Chave de Fenda M", "Chave de Fenda G", "Alicate Decapador", "Alicate Striper", "Power Meter", "Clivador", "Clivador de Fusão", "Caneta de Limpeza", "Frasco de Álcool", "Caneta Laser", "Máquina de Fusão", "Bancada Naval", "Morsa", "Martelo Unha", "Furadeira", "Decapador", "Alicate Crimpador", "Notebook", "Fusimec (Máquina de Cintar)", "Guia Passa Fio", "OTDR", "Identificador de Fibra Ativa", "Arco de Serra", "Lanterna LED", "Maçarico", "Rotulador Tubo Loose", "Decapador Longitudinal Tubo Loose", "Estilete", "Cavalete de Fibra", "Balde de Lona", "Etiquetadora", "Gabarito", "Outra Ferramenta"];
+const EMPTYK=()=>({epi:[],rede:[],ativ:[]});
+let F=EMPTYK(),KEY=null,setor='rede';
+function fixK(){F.epi=F.epi||[];F.rede=F.rede||[];F.ativ=F.ativ||[]}
+const hasK=()=>F.epi.length+F.rede.length+F.ativ.length>0;
+const save=()=>{if(!KEY)return;F.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(F))}catch(e){}cloudPush()};
+const NM={rede:'Rede',ativ:'Ativação'};
+const LS=k=>k==='epi'?EPIS:FERR;
+const flt=()=>{const w=nz($('#q').value).split(/\s+/).filter(Boolean);return n=>w.every(k=>nz(n).includes(k))};
+function drawAll(){
+ $('#tabs').innerHTML=['rede','ativ'].map(k=>`<button class="${k===setor?'on':''}" onclick="setor='${k}';drawAll()">${NM[k]}<br><small>${F[k].length} ferramentas</small></button>`).join('');
+ const f=flt();
+ const sec=(t,key)=>{const L=LS(key),sel=new Set(F[key]);return `<div class="sh"><b>${t} (${F[key].length}/${L.length})</b><span><a href="#" onclick="allVis('${key}',true);return false">marcar todos</a> · <a href="#" onclick="allVis('${key}',false);return false">limpar</a></span></div><table>`+L.filter(f).map(n=>`<tr onclick="tg('${key}',${L.indexOf(n)})" class="${sel.has(n)?'sl':''}"><td class="bx">${sel.has(n)?'☑':'☐'}</td><td>${esc(n)}</td></tr>`).join('')+'</table>'};
+ $('#its').innerHTML=sec('EPIs (iguais nos dois setores)','epi')+sec('Ferramentas - '+NM[setor],setor);
+ $('#cnt').textContent='Setor '+NM[setor]+': '+F.epi.length+' EPIs + '+F[setor].length+' ferramentas';
+}
+function tg(key,i){const L=LS(key),n=L[i],a=F[key],j=a.indexOf(n);if(j<0)a.push(n);else a.splice(j,1);F[key]=L.filter(x=>a.includes(x));save();drawAll()}
+function allVis(key,on){const L=LS(key),f=flt(),s=new Set(F[key]);L.filter(f).forEach(n=>on?s.add(n):s.delete(n));F[key]=L.filter(n=>s.has(n));save();drawAll()}
+/* ===== PDF ===== */
+const pe=t=>String(t).replace(/[\\()]/g,'\\$&');
+const tx=(x,y,s,z,b)=>`BT /F${b?2:1} ${z} Tf ${x} ${y} Td (${pe(s)}) Tj ET\n`;
+const bx=(x,y)=>`0.8 w ${x} ${y-1} 9 9 re S\n`;
+function kitPdf(docs){
+ const P=[];
+ for(const d of docs){
+  let pg,col=0,y=0,top=0;
+  const start=f=>{pg={c:''};P.push(pg);col=0;if(f){pg.c+=tx(50,805,d.title,18,1)+tx(50,786,d.sub,10,0)+'0.5 w 50 778 m 545 778 l S\n';top=750}else{pg.c+=tx(50,805,d.title+' (continuação)',12,1);top=780}y=top};
+  const need=h=>{if(y-h<55){if(col===0){col=1;y=top}else start(false)}};
+  start(true);
+  for(const [h,items] of d.secs){
+   need(60);pg.c+=tx(50+col*260,y,h+' ('+items.length+')',12,1);y-=22;
+   if(!items.length){need(20);pg.c+=tx(50+col*260,y,'(nenhum item selecionado)',10,0);y-=20}
+   for(const n of items){need(20);const x=50+col*260,t=n.startsWith('Outr')?n+': ______________':n;pg.c+=bx(x,y)+tx(x+16,y,t.length>44?t.slice(0,43)+'.':t,10,0);y-=18}
+   y-=10;
+  }
+ }
+ P.forEach((p,i)=>{p.c+=tx(280,25,(i+1)+'/'+P.length,9,0)});
+ const o=['<</Type/Catalog/Pages 2 0 R>>',null,'<</Type/Font/Subtype/Type1/BaseFont/Helvetica/Encoding/WinAnsiEncoding>>','<</Type/Font/Subtype/Type1/BaseFont/Helvetica-Bold/Encoding/WinAnsiEncoding>>'],kids=[];
+ P.forEach((p,i)=>{const n=5+i*2;kids.push(n+' 0 R');o[n-1]='<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Resources<</Font<</F1 3 0 R/F2 4 0 R>>>>/Contents '+(n+1)+' 0 R>>';o[n]='<</Length '+p.c.length+'>>\nstream\n'+p.c+'endstream'});
+ o[1]='<</Type/Pages/Kids['+kids.join(' ')+']/Count '+P.length+'>>';
+ let out='%PDF-1.4\n';const off=[];
+ o.forEach((b,i)=>{off.push(out.length);out+=(i+1)+' 0 obj\n'+b+'\nendobj\n'});
+ const x=out.length;
+ out+='xref\n0 '+(o.length+1)+'\n0000000000 65535 f \n'+off.map(n=>String(n).padStart(10,'0')+' 00000 n \n').join('')+'trailer\n<</Size '+(o.length+1)+'/Root 1 0 R>>\nstartxref\n'+x+'\n%%EOF';
+ const u=new Uint8Array(out.length);for(let i=0;i<out.length;i++)u[i]=out.charCodeAt(i)&255;
+ return new Blob([u],{type:'application/pdf'});
+}
+function pdfKit(w){
+ const now=Date.now(),mk=s=>{const nm=s==='rede'?'Rede':'Ativação';return {title:'Kit do setor '+nm,sub:'EPIs: '+F.epi.length+' - Ferramentas: '+F[s].length+' - Emitido em '+fd(now)+' '+ftm(now),secs:[['EPIs',F.epi],['Ferramentas - '+nm,F[s]]]}};
+ const docs=(w==='ambos'?['rede','ativ']:[w]).map(mk);
+ if(docs.every(d=>d.secs.every(s=>!s[1].length)))return alert('Selecione pelo menos um item.');
+ const a=document.createElement('a');a.href=URL.createObjectURL(kitPdf(docs));a.download='kit-'+(w==='ambos'?'rede-ativacao':w==='rede'?'rede':'ativacao')+'.pdf';document.body.appendChild(a);a.click();a.remove();
+}
+/* ===== login + nuvem ===== */
+const FBV='10.14.1',FBC={apiKey:"AIzaSyDVK9Xo4URV_hbG133RMhjyiAiCkqLBT4k",authDomain:"vistoria-ftta.firebaseapp.com",databaseURL:"https://vistoria-ftta-default-rtdb.firebaseio.com",projectId:"vistoria-ftta",storageBucket:"vistoria-ftta.firebasestorage.app",messagingSenderId:"470874503323",appId:"1:470874503323:web:4739909f2deca9c311ee3e"};
+let CL=null,cst='off',ptm=null,lastSync=0,entered=false,unlocked=false,fresh=false;
+const EM={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-login-credentials':'E-mail ou senha incorretos.','auth/wrong-password':'E-mail ou senha incorretos.','auth/user-not-found':'E-mail ou senha incorretos.','auth/too-many-requests':'Muitas tentativas. Espere um pouco.','auth/network-request-failed':'Sem internet.','auth/user-disabled':'Conta desativada.'};
+const GATE=h=>{$('#gc').innerHTML=h;$('#gate').style.display='flex'};
+function openApp(){entered=true;$('#gate').style.display='none'}
+function loadF(key){KEY=key;let r=null;try{r=JSON.parse(localStorage.getItem(key))}catch(e){}F=r||EMPTYK();fixK();drawAll()}
+const bioKey=u=>'bio_'+u,bioOK=()=>!!(window.PublicKeyCredential&&navigator.credentials&&location.protocol==='https:');
+const unb64=x=>Uint8Array.from(atob(x),c=>c.charCodeAt(0));
+async function bioCheck(uid){try{await navigator.credentials.get({publicKey:{challenge:crypto.getRandomValues(new Uint8Array(32)),allowCredentials:[{type:'public-key',id:unb64(localStorage.getItem(bioKey(uid)))}],userVerification:'required',timeout:60000}});return true}catch(e){return false}}
+async function bioUnlock(){const u=CL&&CL.user;if(!u)return;if(await bioCheck(u.uid))enter(u);else{const e=$('#lerr');if(e)e.textContent='Digital não reconhecida. Tente de novo.'}}
+function showLock(u){GATE(`<b>Kits por setor</b><div class="m">${esc(u.email)}</div><div class="a" style="margin-top:12px"><button class="g" onclick="bioUnlock()">👆 Desbloquear com a digital</button></div><div id="lerr" class="m" style="color:#c0392b;margin-top:8px"></div>`)}
+function loginUI(){GATE(`<b>Kits por setor</b><div class="m">Entre com seu e-mail e senha.</div><input id="le" type="email" autocomplete="username" placeholder="E-mail" style="margin:10px 0 8px"><input id="lp" type="password" autocomplete="current-password" placeholder="Senha"><div id="lerr" class="m" style="color:#c0392b;margin-top:6px"></div><div class="a" style="margin-top:10px"><button onclick="doLogin()">Entrar</button></div>`)}
+async function doLogin(){
+ const e=$('#le').value.trim(),p=$('#lp').value,er=$('#lerr');
+ if(!e||!p){er.textContent='Preencha e-mail e senha.';return}
+ er.textContent='Entrando...';fresh=true;
+ try{await CL.Au.signInWithEmailAndPassword(CL.auth,e,p)}catch(x){fresh=false;er.textContent=EM[x.code]||('Erro: '+(x.code||x.message))}
+}
+function enter(u){unlocked=true;fresh=false;try{sessionStorage.setItem('unl','1')}catch(e){}loadF('kt_'+u.uid);openApp();cloudPull()}
+function authChanged(u){
+ CL.user=u;
+ if(!u){cst='login';cloudUI();unlocked=false;entered=false;KEY=null;try{sessionStorage.removeItem('unl')}catch(e){}F=EMPTYK();drawAll();loginUI();return}
+ if(KEY==='kt_'+u.uid){cloudPull();return}
+ let unl=false;try{unl=sessionStorage.getItem('unl')==='1'}catch(e){}
+ if(bioOK()&&localStorage.getItem(bioKey(u.uid))&&!unlocked&&!unl&&!fresh){showLock(u);return}
+ enter(u);
+}
+function offlineGate(){
+ if(entered)return;let l=null;try{l=JSON.parse(localStorage.getItem('fp_last'))}catch(e){}
+ if(!l){GATE('<b>Sem conexão</b><div class="m">No primeiro acesso é preciso internet para entrar.</div><div class="a" style="margin-top:10px"><button onclick="location.reload()">Tentar de novo</button></div>');return}
+ GATE(`<b>Sem internet</b><div class="m">Entrar offline como ${esc(l.email)}.</div><div class="a" style="margin-top:10px"><button onclick="offEnter()">${localStorage.getItem(bioKey(l.uid))?'👆 Desbloquear com a digital':'Continuar offline'}</button></div>`);
+}
+async function offEnter(){
+ const l=JSON.parse(localStorage.getItem('fp_last'));
+ if(localStorage.getItem(bioKey(l.uid))&&!(await bioCheck(l.uid))){alert('Digital não reconhecida.');return}
+ loadF('kt_'+l.uid);openApp();
+}
+function cloudUI(){const b=$('#cl');if(b)b.textContent=({off:'☁✖',login:'☁⚠',sync:'☁…',ok:'☁✔',err:'☁!'})[cst]||'☁'}
+async function cloudInit(){
+ if(CL)return;
+ if(!/^https?:$/.test(location.protocol)){if(!entered){loadF('ft_local');openApp()}return}
+ try{
+  const B='https://www.gstatic.com/firebasejs/'+FBV+'/';
+  const to=new Promise((_,rj)=>setTimeout(()=>rj(new Error('timeout')),8000));
+  const [A,Au,D]=await Promise.race([Promise.all([import(B+'firebase-app.js'),import(B+'firebase-auth.js'),import(B+'firebase-database.js')]),to]);
+  const app=A.initializeApp(FBC);CL={Au,D,auth:Au.getAuth(app),db:D.getDatabase(app),user:null};
+  Au.onAuthStateChanged(CL.auth,authChanged);
+ }catch(e){CL=null;cst='off';cloudUI();offlineGate()}
+}
+async function cloudPull(){
+ if(!CL||!CL.user||!KEY)return;cst='sync';cloudUI();
+ try{
+  const v=(await CL.D.get(CL.D.ref(CL.db,'users/'+CL.user.uid+'/kits'))).val();
+  if(v&&v.json&&v.ts>(F.ts||0)){F=JSON.parse(v.json);F.ts=v.ts;fixK();try{localStorage.setItem(KEY,JSON.stringify(F))}catch(e){}drawAll()}
+  else if((!v&&hasK())||(v&&F.ts&&F.ts>v.ts)){F.ts=F.ts||Date.now();await cloudPushNow();return}
+  cst='ok';lastSync=Date.now();
+ }catch(e){cst='err'}
+ cloudUI();
+}
+function cloudPush(){if(!CL||!CL.user)return;cst='sync';cloudUI();clearTimeout(ptm);ptm=setTimeout(cloudPushNow,1500)}
+async function cloudPushNow(){
+ if(!CL||!CL.user||!KEY)return;
+ try{await CL.D.set(CL.D.ref(CL.db,'users/'+CL.user.uid+'/kits'),{json:JSON.stringify(F),ts:F.ts||Date.now()});cst='ok';lastSync=Date.now()}catch(e){cst='err'}
+ cloudUI();
+}
+function cloudBtn(){
+ if(!/^https?:$/.test(location.protocol)){alert('A nuvem só funciona na versão instalada (a do GitHub). Nesta versão os dados ficam só no celular.');return}
+ if(!CL||!CL.user){alert('Sem conexão com a nuvem agora. O que você registrar fica salvo no celular e sobe quando a internet voltar.');cloudInit();return}
+ const t={ok:'Sincronizado',sync:'Sincronizando...',err:'Erro ao sincronizar',off:'Sem conexão',login:'Não conectado'}[cst];
+ if(confirm('Conta: '+CL.user.email+'\n'+t+(lastSync?' às '+ftm(lastSync):'')+'\n\nEnviar agora para a nuvem?'))cloudPushNow();
+}
+addEventListener('online',()=>{CL?cloudPull():cloudInit()});
+drawAll();cloudInit();
+</script></body></html>
