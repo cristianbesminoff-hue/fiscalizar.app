@@ -20,16 +20,17 @@ table{width:100%;border-collapse:collapse}td{padding:9px 8px;border-bottom:1px s
 .q{display:flex;align-items:center;gap:6px}.q button{padding:4px 10px;background:#e3e8ef;color:#1a1d21}
 #pm{position:fixed;inset:0;background:#0007;display:none;z-index:2000;overflow:auto}#pm>div{background:#f2f4f7;margin:16px 8px;border-radius:12px;padding:14px}
 #gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
-#rep{display:none}
+#rep{display:none}#dg{position:fixed;inset:0;background:#0007;display:none;z-index:2500;align-items:center;justify-content:center;padding:16px}.dgb{background:#fff;border-radius:14px;padding:16px;width:100%;max-width:380px}.og{display:grid;gap:6px;margin-top:10px}.og button{background:#e3e8ef;color:#1a1d21;padding:12px 0}
 @media print{body>*:not(#rep){display:none!important}#rep{display:block;padding:10px;font-family:system-ui,sans-serif;color:#000;background:#fff}body{background:#fff}.rt{width:100%;border-collapse:collapse;font-size:12px}.rt th,.rt td{border:1px solid #444;padding:4px 6px;text-align:left}h2{margin:0 0 6px}}
 </style></head><body>
-<header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Faltantes em vistoria</b></header>
+<header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Faltantes em vistoria</b> <small style="opacity:.7">v6</small></header>
 <main>
 <div class="c"><b>Novo registro</b>
  <label>Técnico</label><input id="tec" list="tl" placeholder="Nome do técnico" autocomplete="off"><datalist id="tl"></datalist>
  <label>Classificação</label><div class="ch" id="cls"><button data-v="Operação">Operação</button><button data-v="Ativação">Ativação</button></div>
  <div class="m" id="now"></div>
  <label>Buscar item faltante (digite as letras)</label><input id="bq" placeholder="Ex.: luva, alicate, otdr..." oninput="drawItems()" autocomplete="off">
+ <div class="ch" id="itabs" style="margin-top:8px"></div>
  <div id="its"></div>
  <label>Itens selecionados</label><div id="sel"></div>
  <div class="a"><button class="g" onclick="salvar()">Salvar registro</button></div>
@@ -45,6 +46,7 @@ table{width:100%;border-collapse:collapse}td{padding:9px 8px;border-bottom:1px s
  <label>Classificação</label><select id="pc"><option value="">Operação e Ativação</option><option>Operação</option><option>Ativação</option></select>
  <label>Situação</label><select id="ps"><option value="pend">Pendentes de entrega</option><option value="ent">Entregues</option><option value="todos">Todas</option></select>
  <div class="a"><button class="s" onclick="$('#pm').style.display='none'">Fechar</button><button onclick="relat()">Imprimir</button></div></div></div>
+<div id="dg"><div class="dgb" id="dgc"></div></div>
 <div id="rep"></div>
 <div id="gate"><div class="gb" id="gc">Carregando...</div></div>
 <script>
@@ -52,22 +54,43 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nz=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const fd=t=>new Date(t).toLocaleDateString('pt-BR'),ftm=t=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-const EPIS=["Óculos Escuros", "Óculos Transparente", "Capacete", "Cinto Paraquedista", "Talabarte de Posicionamento","Trava Quedas", "Luva Isolante", "Luva de Cobertura", "Luva de Vaqueta", "Detector de Tensão", "Eureka", "Corda Linha de Vida", "Fita Catraca", "Fita de Ancoragem 1,20", "Fita de Ancoragem 0,80", "Calça Antichama", "Jaleco Antichama", "Camisa", "Botina", "Escada", "Cones", "Outro EPI"],FERR=["Alicate de Corte", "Alicate Universal", "Alicate de Bico", "Chave BAP", "Chave de Guarita", "Chave Philips P", "Chave Philips M", "Chave Philips G", "Chave de Fenda P", "Chave de Fenda M", "Chave de Fenda G", "Alicate Decapador", "Alicate Striper", "Power Meter", "Clivador", "Clivador de Fusão", "Caneta de Limpeza", "Frasco de Álcool", "Caneta Laser", "Máquina de Fusão", "Bancada Naval", "Morsa", "Martelo Unha", "Furadeira", "Decapador", "Alicate Crimpador", "Notebook", "Fusimec (Máquina de Cintar)", "Guia Passa Fio", "OTDR", "Identificador de Fibra Ativa", "Arco de Serra", "Lanterna LED", "Maçarico", "Rotulador Tubo Loose", "Decapador Longitudinal Tubo Loose", "Estilete", "Cavalete de Fibra", "Balde de Lona", "Etiquetadora", "Gabarito", "Outra Ferramenta"];
+const EPIS=["Óculos Escuros", "Óculos Transparente","Óculos de Sobrepor", "Capacete", "Cinto Paraquedista", "Talabarte de Posicionamento","Trava Quedas", "Luva Isolante", "Luva de Cobertura", "Luva de Vaqueta", "Detector de Tensão", "Eureka", "Corda Linha de Vida", "Fita Catraca", "Fita de Ancoragem 1,20", "Fita de Ancoragem 0,80", "Calça Antichama", "Jaleco Antichama", "Camisa", "Botina", "Escada", "Cones", "Outro EPI"],FERR=["Alicate de Corte", "Alicate Universal", "Alicate de Bico", "Chave BAP", "Chave de Guarita", "Chave Philips P", "Chave Philips M", "Chave Philips G", "Chave de Fenda P", "Chave de Fenda M", "Chave de Fenda G", "Alicate Decapador", "Alicate Striper", "Power Meter", "Clivador", "Clivador de Fusão", "Caneta de Limpeza", "Frasco de Álcool", "Caneta Laser", "Máquina de Fusão", "Bancada Naval", "Morsa", "Martelo Unha", "Furadeira", "Decapador", "Alicate Crimpador", "Notebook", "Fusimec (Máquina de Cintar)", "Guia Passa Fio", "OTDR", "Identificador de Fibra Ativa", "Arco de Serra", "Lanterna LED", "Maçarico", "Rotulador Tubo Loose", "Decapador Longitudinal Tubo Loose", "Estilete", "Cavalete de Fibra", "Balde de Lona", "Etiquetadora", "Gabarito", "Outra Ferramenta"];
 const ITEMS=[...EPIS.map(n=>({n,c:'EPI'})),...FERR.map(n=>({n,c:'Ferramenta'}))];
 let F={recs:[]},SEL=[],CLS='',KEY=null;
 const save=()=>{if(!KEY)return;F.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(F))}catch(e){}cloudPush()};
-function drawItems(){
- const w=nz($('#bq').value).split(/\s+/).filter(Boolean);
- const it=ITEMS.map((x,i)=>[x,i]).filter(([x])=>w.every(k=>nz(x.n).includes(k)));
- $('#its').innerHTML='<table>'+(it.map(([x,i])=>`<tr onclick="addIt(${i})"><td>${esc(x.n)}<br><span class="tag">${x.c}</span></td><td class="pl">+</td></tr>`).join('')||'<tr><td>Nada encontrado</td></tr>')+'</table>';
+const dgClose=()=>{$('#dg').style.display='none'};
+function dlgText(t,cb){
+ $('#dgc').innerHTML=`<b>${esc(t)}</b><input id="dgi" placeholder="Descreva o item" autocomplete="off" style="margin-top:10px"><div class="a"><button class="s" onclick="dgClose()">Cancelar</button><button class="g" id="dgok">Adicionar</button></div>`;
+ $('#dg').style.display='flex';const i=$('#dgi');setTimeout(()=>i.focus(),50);
+ const ok=()=>{const v=i.value.trim();if(!v){i.focus();return}dgClose();cb(v)};
+ $('#dgok').onclick=ok;i.onkeydown=e=>{if(e.key==='Enter')ok()};
 }
+function dlgOpts(t,o,cb,cols){
+ $('#dgc').innerHTML=`<b>${esc(t)}</b><div class="og" style="grid-template-columns:repeat(${cols||5},1fr)">${o.map((x,k)=>`<button data-k="${k}">${esc(x)}</button>`).join('')}</div><div class="a"><button class="s" onclick="dgClose()">Cancelar</button></div>`;
+ $('#dg').style.display='flex';
+ $('#dgc').querySelectorAll('.og button').forEach(b=>b.onclick=()=>{dgClose();cb(o[+b.dataset.k])});
+}
+let ptab='EPI';
+const VAR={'Botina':{t:'Tamanho da botina',o:['35','36','37','38','39','40','41','42','43','44'],c:5},'Óculos de Sobrepor':{t:'Cor da lente',o:['Transparente','Fumê'],c:2}};
+const isOut=n=>/^Outr[oa] /.test(n);
+function drawItems(){
+ const w=nz($('#bq').value).split(/\s+/).filter(Boolean),ok=x=>w.every(k=>nz(x.n).includes(k));
+ const cnt={EPI:0,Ferramenta:0};ITEMS.forEach(x=>{if(ok(x))cnt[x.c]++});
+ const oth=ptab==='EPI'?'Ferramenta':'EPI';if(w.length&&!cnt[ptab]&&cnt[oth])ptab=oth;
+ $('#itabs').innerHTML=[['EPI','EPIs'],['Ferramenta','Ferramentas']].map(([k,l])=>`<button class="${k===ptab?'on':''}" onclick="ptab='${k}';drawItems()">${l} (${cnt[k]})</button>`).join('');
+ const it=ITEMS.map((x,i)=>[x,i]).filter(([x])=>x.c===ptab&&ok(x));
+ $('#its').innerHTML='<table>'+(it.map(([x,i])=>`<tr onclick="addIt(${i})"><td>${esc(x.n)}${VAR[x.n]?' <span class="m">(escolher)</span>':isOut(x.n)?' <span class="m">(descrever)</span>':''}</td><td class="pl">+</td></tr>`).join('')||'<tr><td>Nada encontrado</td></tr>')+'</table>';
+}
+function put(n,c){const f=SEL.find(s=>s.n===n);if(f)f.q++;else SEL.push({n,cat:c,q:1});SEL.sort((a,b)=>(a.cat==='EPI'?0:1)-(b.cat==='EPI'?0:1));drawSel()}
 function addIt(i){
- const x=ITEMS[i];let n=x.n;
- if(n==='Outro EPI'||n==='Outra Ferramenta'){const d=prompt('Descreva: '+n);if(!d||!d.trim())return;n=n+': '+d.trim()}
- const f=SEL.find(s=>s.n===n);if(f)f.q++;else SEL.push({n,cat:x.c,q:1});drawSel();
+ const x=ITEMS[i];
+ if(isOut(x.n))return dlgText('Descreva: '+x.n,d=>put(x.n+': '+d,x.c));
+ const v=VAR[x.n];if(v)return dlgOpts(v.t,v.o,o=>put(x.n+' '+o,x.c),v.c);
+ put(x.n,x.c);
 }
 function drawSel(){
- $('#sel').innerHTML=SEL.map((s,i)=>`<div class="ir"><span>${esc(s.n)}<br><span class="tag">${s.cat}</span></span><span class="q"><button onclick="qty(${i},-1)">−</button><b>${s.q}</b><button onclick="qty(${i},1)">+</button><button class="x" onclick="SEL.splice(${i},1);drawSel()">✖</button></span></div>`).join('')||'<div class="m">Toque num item da tabela para adicionar.</div>';
+ let last='';
+ $('#sel').innerHTML=SEL.map((s,i)=>{const h=s.cat!==last?`<div class="m" style="margin-top:8px"><b>${s.cat==='EPI'?'EPIs':'Ferramentas'}</b></div>`:'';last=s.cat;return h+`<div class="ir"><span>${esc(s.n)}</span><span class="q"><button onclick="qty(${i},-1)">−</button><b>${s.q}</b><button onclick="qty(${i},1)">+</button><button class="x" onclick="SEL.splice(${i},1);drawSel()">✖</button></span></div>`}).join('')||'<div class="m">Toque num item da tabela para adicionar.</div>';
 }
 function qty(i,d){SEL[i].q=Math.max(1,SEL[i].q+d);drawSel()}
 $('#cls').onclick=e=>{const b=e.target.closest('button');if(!b)return;CLS=b.dataset.v;[...$('#cls').children].forEach(x=>x.classList.toggle('on',x===b))};

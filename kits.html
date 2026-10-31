@@ -14,9 +14,9 @@ main{padding:8px;padding-bottom:120px}.c{background:#fff;border-radius:10px;padd
 .ch{display:flex;gap:6px;margin-top:8px}.ch button{flex:1;background:#e3e8ef;color:#1a1d21;padding:8px 2px;line-height:1.2}.ch button.on{background:#0b5cad;color:#fff}
 .sh{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:14px 0 4px}.sh a{color:#0b5cad;font-size:13px}#bar{position:fixed;left:0;right:0;bottom:0;background:#fff;box-shadow:0 -2px 8px #0003;padding:8px;z-index:4}
 table{width:100%;border-collapse:collapse}td{padding:10px 8px;border-bottom:1px solid #eef}tr.sl{background:#e8f6ee}.bx{width:36px;font-size:21px;color:#1a8a4a;text-align:center}
-#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
+#dg{position:fixed;inset:0;background:#0007;display:none;z-index:2500;align-items:center;justify-content:center;padding:16px}.dgb{background:#fff;border-radius:14px;padding:16px;width:100%;max-width:380px}.og{display:grid;gap:6px;margin-top:10px}.og button{background:#e3e8ef;color:#1a1d21;padding:12px 0}#gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
 </style></head><body>
-<header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Kits por setor</b></header>
+<header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Kits por setor</b> <small style="opacity:.7">v6</small></header>
 <main>
 <div class="c"><b>Setor do kit</b>
  <div class="ch" id="tabs"></div>
@@ -25,13 +25,14 @@ table{width:100%;border-collapse:collapse}td{padding:10px 8px;border-bottom:1px 
 <div class="c" id="its"></div>
 </main>
 <div id="bar"><div class="m" id="cnt"></div><div class="a" style="margin-top:4px"><button class="s" onclick="pdfKit('ambos')">Rede + Ativação</button><button class="g" onclick="pdfKit(setor)">📄 Baixar PDF</button></div></div>
+<div id="dg"><div class="dgb" id="dgc"></div></div>
 <div id="gate"><div class="gb" id="gc">Carregando...</div></div>
 <script>
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const nz=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase();
 const fd=t=>new Date(t).toLocaleDateString('pt-BR'),ftm=t=>new Date(t).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-const EPIS=["Óculos Escuros", "Óculos Transparente", "Capacete", "Cinto Paraquedista", "Talabarte de Posicionamento","Trava Quedas", "Luva Isolante", "Luva de Cobertura", "Luva de Vaqueta", "Detector de Tensão", "Eureka", "Corda Linha de Vida", "Fita Catraca", "Fita de Ancoragem 1,20", "Fita de Ancoragem 0,80", "Calça Antichama", "Jaleco Antichama", "Camisa", "Botina", "Escada", "Cones", "Outro EPI"],FERR=["Alicate de Corte", "Alicate Universal", "Alicate de Bico", "Chave BAP", "Chave de Guarita", "Chave Philips P", "Chave Philips M", "Chave Philips G", "Chave de Fenda P", "Chave de Fenda M", "Chave de Fenda G", "Alicate Decapador", "Alicate Striper", "Power Meter", "Clivador", "Clivador de Fusão", "Caneta de Limpeza", "Frasco de Álcool", "Caneta Laser", "Máquina de Fusão", "Bancada Naval", "Morsa", "Martelo Unha", "Furadeira", "Decapador", "Alicate Crimpador", "Notebook", "Fusimec (Máquina de Cintar)", "Guia Passa Fio", "OTDR", "Identificador de Fibra Ativa", "Arco de Serra", "Lanterna LED", "Maçarico", "Rotulador Tubo Loose", "Decapador Longitudinal Tubo Loose", "Estilete", "Cavalete de Fibra", "Balde de Lona", "Etiquetadora", "Gabarito", "Outra Ferramenta"];
+const EPIS=["Óculos Escuros", "Óculos Transparente","Óculos de Sobrepor", "Capacete", "Cinto Paraquedista", "Talabarte de Posicionamento","Trava Quedas", "Luva Isolante", "Luva de Cobertura", "Luva de Vaqueta", "Detector de Tensão", "Eureka", "Corda Linha de Vida", "Fita Catraca", "Fita de Ancoragem 1,20", "Fita de Ancoragem 0,80", "Calça Antichama", "Jaleco Antichama", "Camisa", "Botina", "Escada", "Cones", "Outro EPI"],FERR=["Alicate de Corte", "Alicate Universal", "Alicate de Bico", "Chave BAP", "Chave de Guarita", "Chave Philips P", "Chave Philips M", "Chave Philips G", "Chave de Fenda P", "Chave de Fenda M", "Chave de Fenda G", "Alicate Decapador", "Alicate Striper", "Power Meter", "Clivador", "Clivador de Fusão", "Caneta de Limpeza", "Frasco de Álcool", "Caneta Laser", "Máquina de Fusão", "Bancada Naval", "Morsa", "Martelo Unha", "Furadeira", "Decapador", "Alicate Crimpador", "Notebook", "Fusimec (Máquina de Cintar)", "Guia Passa Fio", "OTDR", "Identificador de Fibra Ativa", "Arco de Serra", "Lanterna LED", "Maçarico", "Rotulador Tubo Loose", "Decapador Longitudinal Tubo Loose", "Estilete", "Cavalete de Fibra", "Balde de Lona", "Etiquetadora", "Gabarito", "Outra Ferramenta"];
 const EMPTYK=()=>({epi:[],rede:[],ativ:[]});
 let F=EMPTYK(),KEY=null,setor='rede';
 function fixK(){F.epi=F.epi||[];F.rede=F.rede||[];F.ativ=F.ativ||[]}
@@ -43,12 +44,28 @@ const flt=()=>{const w=nz($('#q').value).split(/\s+/).filter(Boolean);return n=>
 function drawAll(){
  $('#tabs').innerHTML=['rede','ativ'].map(k=>`<button class="${k===setor?'on':''}" onclick="setor='${k}';drawAll()">${NM[k]}<br><small>${F[k].length} ferramentas</small></button>`).join('');
  const f=flt();
- const sec=(t,key)=>{const L=LS(key),sel=new Set(F[key]);return `<div class="sh"><b>${t} (${F[key].length}/${L.length})</b><span><a href="#" onclick="allVis('${key}',true);return false">marcar todos</a> · <a href="#" onclick="allVis('${key}',false);return false">limpar</a></span></div><table>`+L.filter(f).map(n=>`<tr onclick="tg('${key}',${L.indexOf(n)})" class="${sel.has(n)?'sl':''}"><td class="bx">${sel.has(n)?'☑':'☐'}</td><td>${esc(n)}</td></tr>`).join('')+'</table>'};
+ const sec=(t,key)=>{const L=LS(key),sel=new Set(F[key]),cu=F[key].filter(isC);return `<div class="sh"><b>${t} (${F[key].length}/${L.filter(n=>!isB(n)).length})</b><span><a href="#" onclick="allVis('${key}',true);return false">marcar todos</a> · <a href="#" onclick="allVis('${key}',false);return false">limpar</a></span></div><table>`+L.filter(f).map(n=>isB(n)?`<tr onclick="outro('${key}')"><td class="bx">＋</td><td>${esc(n)} <span class="m">(toque para descrever)</span></td></tr>`+cu.map((c,j)=>`<tr class="sl" onclick="rmC('${key}',${j})"><td class="bx">☑</td><td>${esc(c)}</td></tr>`).join(''):`<tr onclick="tg('${key}',${L.indexOf(n)})" class="${sel.has(n)?'sl':''}"><td class="bx">${sel.has(n)?'☑':'☐'}</td><td>${esc(n)}</td></tr>`).join('')+'</table>'};
  $('#its').innerHTML=sec('EPIs (iguais nos dois setores)','epi')+sec('Ferramentas - '+NM[setor],setor);
  $('#cnt').textContent='Setor '+NM[setor]+': '+F.epi.length+' EPIs + '+F[setor].length+' ferramentas';
 }
-function tg(key,i){const L=LS(key),n=L[i],a=F[key],j=a.indexOf(n);if(j<0)a.push(n);else a.splice(j,1);F[key]=L.filter(x=>a.includes(x));save();drawAll()}
-function allVis(key,on){const L=LS(key),f=flt(),s=new Set(F[key]);L.filter(f).forEach(n=>on?s.add(n):s.delete(n));F[key]=L.filter(n=>s.has(n));save();drawAll()}
+const dgClose=()=>{$('#dg').style.display='none'};
+function dlgText(t,cb){
+ $('#dgc').innerHTML=`<b>${esc(t)}</b><input id="dgi" placeholder="Descreva o item" autocomplete="off" style="margin-top:10px"><div class="a"><button class="s" onclick="dgClose()">Cancelar</button><button class="g" id="dgok">Adicionar</button></div>`;
+ $('#dg').style.display='flex';const i=$('#dgi');setTimeout(()=>i.focus(),50);
+ const ok=()=>{const v=i.value.trim();if(!v){i.focus();return}dgClose();cb(v)};
+ $('#dgok').onclick=ok;i.onkeydown=e=>{if(e.key==='Enter')ok()};
+}
+function dlgOpts(t,o,cb,cols){
+ $('#dgc').innerHTML=`<b>${esc(t)}</b><div class="og" style="grid-template-columns:repeat(${cols||5},1fr)">${o.map((x,k)=>`<button data-k="${k}">${esc(x)}</button>`).join('')}</div><div class="a"><button class="s" onclick="dgClose()">Cancelar</button></div>`;
+ $('#dg').style.display='flex';
+ $('#dgc').querySelectorAll('.og button').forEach(b=>b.onclick=()=>{dgClose();cb(o[+b.dataset.k])});
+}
+const isB=n=>/^Outr[oa] /.test(n)&&!n.includes(':');
+const isC=n=>/^Outr[oa] [^:]+: /.test(n);
+function tg(key,i){const L=LS(key),n=L[i],a=F[key],j=a.indexOf(n);if(j<0)a.push(n);else a.splice(j,1);F[key]=[...L.filter(x=>a.includes(x)),...a.filter(isC)];save();drawAll()}
+function allVis(key,on){const L=LS(key),f=flt(),s=new Set(F[key]),v=L.filter(f);v.filter(n=>!isB(n)).forEach(n=>on?s.add(n):s.delete(n));F[key]=[...L.filter(n=>s.has(n)&&!isB(n)),...F[key].filter(c=>isC(c)&&(on||!v.some(isB)))];save();drawAll()}
+function outro(key){const b=LS(key).find(isB);dlgText('Descreva: '+b,d=>{F[key].push(b+': '+d);save();drawAll()})}
+function rmC(key,j){const c=F[key].filter(isC)[j];F[key].splice(F[key].indexOf(c),1);save();drawAll()}
 /* ===== PDF ===== */
 const pe=t=>String(t).replace(/[\\()]/g,'\\$&');
 const tx=(x,y,s,z,b)=>`BT /F${b?2:1} ${z} Tf ${x} ${y} Td (${pe(s)}) Tj ET\n`;
@@ -63,7 +80,7 @@ function kitPdf(docs){
   for(const [h,items] of d.secs){
    need(60);pg.c+=tx(50+col*260,y,h+' ('+items.length+')',12,1);y-=22;
    if(!items.length){need(20);pg.c+=tx(50+col*260,y,'(nenhum item selecionado)',10,0);y-=20}
-   for(const n of items){need(20);const x=50+col*260,t=n.startsWith('Outr')?n+': ______________':n;pg.c+=bx(x,y)+tx(x+16,y,t.length>44?t.slice(0,43)+'.':t,10,0);y-=18}
+   for(const n of items){need(20);const x=50+col*260,t=n;pg.c+=bx(x,y)+tx(x+16,y,t.length>44?t.slice(0,43)+'.':t,10,0);y-=18}
    y-=10;
   }
  }
