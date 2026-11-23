@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sistema Digital Qualidade & Campo - Unifique</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --brand-navy: #142178;
+      --brand-blue: #1e3a8a;
+      --brand-cyan: #0ea5e9;
+    }
+    body {
+      background-color: #0b1120;
+      color: #f1f5f9;
+      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .glass-card {
+      background: rgba(15, 23, 42, 0.88);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      backdrop-filter: blur(10px);
+    }
+    .sig-box {
+      touch-action: manipulation;
+      transition: all 0.2s ease;
+    }
+    .sig-box:active {
+      transform: scale(0.98);
+    }
+    #signatureCanvas {
+      touch-action: none;
+      cursor: crosshair;
+    }
+    .epi-btn {
+      transition: all 0.15s ease;
+    }
+    /* Impressão / PDF Nativo A4 */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 8mm;
+      }
+      body {
+        background: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      #menu-screen,
+      #view-ata,
+      #view-epi,
+      #modalAssinatura,
+      #preview-toolbar {
+        display: none !important;
+      }
+      #preview-modal {
+        position: static !important;
+        display: block !important;
+        background: #ffffff !important;
+        padding: 0 !important;
+        overflow: visible !important;
+      }
+      #pdf-sheet {
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        border: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="min-h-screen pb-20">
+
+  <!-- ==================== 0. TELA INICIAL (MENU DE SELEÇÃO) ==================== -->
+  <div id="menu-screen" class="min-h-screen flex flex-col justify-center items-center px-4 py-10">
+    <div class="max-w-xl w-full space-y-8 text-center">
+      <!-- Logo / Marca -->
+      <div class="space-y-3">
+        <div class="inline-block bg-white text-[#142178] font-black tracking-tighter text-3xl px-5 py-1.5 rounded-2xl shadow-xl">
+          unifique
+        </div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">
+          Portal Digital de Campo &amp; Qualidade
+        </h1>
+        <p class="text-xs sm:text-sm text-slate-400">
+          Selecione o documento que deseja preencher e assinar digitalmente na tela:
+        </p>
+      </div>
+
+      <!-- Opções do Menu -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+        <!-- Card EPIs -->
+        <button onclick="abrirModulo('epi')" class="glass-card hover:border-sky-400 hover:bg-slate-900 transition rounded-2xl p-6 space-y-3 group shadow-xl">
+          <div class="w-12 h-12 rounded-xl bg-sky-500/20 border border-sky-400/40 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+            🦺
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-sky-400">Fiscalização Presencial</span>
+            <h2 class="text-lg font-bold text-white mt-0.5">Checklist de EPI / EPC</h2>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Inspeção completa dos 22 itens de segurança (SIM / NÃO / N/A), condições de uso e assinaturas do Fiscal e Contratada.
+          </p>
+          <div class="pt-2 text-xs font-bold text-sky-300 flex items-center gap-1">
+            <span>Abrir Checklist EPIs</span>
+            <span>→</span>
+          </div>
+        </button>
+
+        <!-- Card Ata Treinamento -->
+        <button onclick="abrirModulo('ata')" class="glass-card hover:border-sky-400 hover:bg-slate-900 transition rounded-2xl p-6 space-y-3 group shadow-xl">
+          <div class="w-12 h-12 rounded-xl bg-indigo-500/20 border border-indigo-400/40 flex items-center justify-center text-2xl group-hover:scale-110 transition">
+            📋
+          </div>
+          <div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-300">Qualificação Técnica</span>
+            <h2 class="text-lg font-bold text-white mt-0.5">Ata de Treinamento</h2>
+          </div>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Ata de reciclagem e qualificação técnica com lista de presença (Nome, CPF e assinatura em tela cheia) e parecer.
+          </p>
+          <div class="pt-2 text-xs font-bold text-indigo-300 flex items-center gap-1">
+            <span>Abrir Ata de Treinamento</span>
+            <span>→</span>
+          </div>
+        </button>
+      </div>
+
+      <p class="text-[11px] text-slate-500">
+        Assinatura manuscrita em tela cheia • Exportação direta em PDF A4
+      </p>
+    </div>
+  </div>
+
+  <!-- ==================== 1. MÓDULO CHECKLIST DE EPI / EPC ==================== -->
+  <div id="view-epi" class="hidden">
+    <header class="sticky top-0 z-30 bg-[#142178] border-b border-sky-400/30 shadow-lg px-4 py-3">
+      <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <button onclick="voltarMenu()" class="px-2.5 py-1.5 rounded-lg bg-slate-900/70 hover:bg-slate-800 text-sky-300 text-xs font-bold border border-sky-400/30 transition">
+            ☰ Menu
+          </button>
+          <div>
+            <h1 class="text-sm sm:text-base font-bold text-white leading-tight">
+              FICHA DE CHECKLIST DE EPI/EPC
+            </h1>
+            <p class="text-[11px] text-sky-200">Presencial • Rev. 12/03/2023 (REV00)</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="limparEPI()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-600">
+            Limpar
+          </button>
+          <button onclick="gerarPDFEpi()" class="px-3.5 py-1.5 text-xs sm:text-sm font-bold rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow">
+            📄 Gerar PDF
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pt-5 space-y-5">
+      <!-- Identificação EPI -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">
+            1. Dados da Fiscalização
+          </h2>
+          <button onclick="capturarGPS('epi')" id="btnGpsEpi" class="text-xs bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-full transition">
+            📍 Anexar GPS
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Empresa Fiscalizadora</label>
+            <input type="text" id="epiEmpresaFiscalizadora" value="UNIFIQUE TELECOMUNICAÇÕES S/A" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Fiscal</label>
+            <input type="text" id="epiFiscal" placeholder="Nome do Fiscal" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Data da Inspeção</label>
+            <input type="date" id="epiData" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Empresa Fiscalizada</label>
+            <input type="text" id="epiEmpresaFiscalizada" placeholder="Ex: DMB / Própria / Parceira" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Técnico Avaliado</label>
+            <input type="text" id="epiTecnico" placeholder="Nome completo do técnico" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Município</label>
+              <input type="text" id="epiMunicipio" placeholder="Ex: Canoas" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Setor</label>
+              <input type="text" id="epiSetor" placeholder="Ex: Instalação" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+            </div>
+          </div>
+        </div>
+        <p id="gpsInfoEpi" class="text-[11px] text-emerald-400 hidden"></p>
+      </section>
+
+      <!-- Lista de EPIs / EPCs -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 pb-2">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">
+              2. Descrição dos EPI's / EPC's (22 Itens)
+            </h2>
+            <p class="text-xs text-slate-400">Toque em SIM, NÃO ou N/A para cada equipamento.</p>
+          </div>
+          <button onclick="marcarTodosEpiSim()" class="text-xs font-semibold bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 px-3 py-1.5 rounded-lg transition">
+            ✓ Marcar Todos SIM
+          </button>
+        </div>
+
+        <div id="listaEpisContainer" class="space-y-2.5"></div>
+      </section>
+
+      <!-- Condições Gerais e Assinaturas EPI -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400 border-b border-slate-700/80 pb-2">
+          3. Condições de Uso &amp; Assinaturas
+        </h2>
+
+        <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <span class="text-sm font-semibold text-slate-200">
+            • Os EPIs e EPC estão em boas condições de uso?
+          </span>
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-2 text-sm font-bold text-emerald-400 cursor-pointer">
+              <input type="radio" name="epiBoasCondicoes" value="SIM" checked class="accent-emerald-400 w-4 h-4" />
+              <span>SIM</span>
+            </label>
+            <label class="flex items-center gap-2 text-sm font-bold text-rose-400 cursor-pointer">
+              <input type="radio" name="epiBoasCondicoes" value="NÃO" class="accent-rose-400 w-4 h-4" />
+              <span>NÃO</span>
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Observações / Não Conformidades (Opcional)</label>
+          <textarea id="epiObservacoes" rows="2" placeholder="Descreva caso algum item esteja vencido, danificado ou ausente..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-sky-400 focus:outline-none"></textarea>
+        </div>
+
+        <!-- Assinaturas EPI: Fiscal da Contratante x Representante Contratada -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <!-- Fiscal da Contratante -->
+          <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+            <span class="block text-xs font-bold text-sky-300 uppercase">Fiscal da Contratante</span>
+            <input type="text" id="epiNomeAssinaturaFiscal" placeholder="Nome do Fiscal" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+            <div onclick="abrirModalAssinatura('epi_fiscal')" id="boxSigEpiFiscal" class="sig-box h-20 rounded-xl border border-dashed border-slate-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
+              <span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>
+            </div>
+          </div>
+
+          <!-- Representante Contratada + CPF -->
+          <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+            <span class="block text-xs font-bold text-sky-300 uppercase">Representante no Local (Contratada)</span>
+            <div class="grid grid-cols-1 gap-2">
+              <input type="text" id="epiNomeAssinaturaRep" placeholder="Nome do Representante / Técnico" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+              <input type="text" inputmode="numeric" id="epiCpfRep" oninput="this.value = formatarCPF(this.value)" maxlength="14" placeholder="CPF: 000.000.000-00" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+            </div>
+            <div onclick="abrirModalAssinatura('epi_rep')" id="boxSigEpiRep" class="sig-box h-20 rounded-xl border border-dashed border-slate-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
+              <span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ==================== 2. MÓDULO ATA DE TREINAMENTO ==================== -->
+  <div id="view-ata" class="hidden">
+    <header class="sticky top-0 z-30 bg-[#142178] border-b border-sky-400/30 shadow-lg px-4 py-3">
+      <div class="max-w-4xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2.5">
+          <button onclick="voltarMenu()" class="px-2.5 py-1.5 rounded-lg bg-slate-900/70 hover:bg-slate-800 text-sky-300 text-xs font-bold border border-sky-400/30 transition">
+            ☰ Menu
+          </button>
+          <div>
+            <h1 class="text-sm sm:text-base font-bold text-white leading-tight">
+              ATA DE TREINAMENTO E QUALIFICAÇÃO
+            </h1>
+            <p class="text-[11px] text-sky-200">Sistema de Gestão da Qualidade &amp; Operações</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="limparAta()" class="px-2.5 py-1.5 text-xs font-medium rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-200 border border-slate-600">
+            Limpar
+          </button>
+          <button onclick="gerarPDFAta()" class="px-3.5 py-1.5 text-xs sm:text-sm font-bold rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 shadow">
+            📄 Gerar PDF
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 pt-5 space-y-5">
+      <!-- 1. Identificação Ata -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-700/80 pb-2">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">
+            1. Identificação e Dados Gerais
+          </h2>
+          <button onclick="capturarGPS('ata')" id="btnGpsAta" class="text-xs bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/30 px-2.5 py-1 rounded-full transition">
+            📍 Anexar GPS
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Data de Realização</label>
+            <input type="date" id="ataData" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Carga Horária (Horas)</label>
+            <input type="text" id="ataCarga" placeholder="Ex: 04:00" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Unidade / Regional</label>
+            <input type="text" id="ataUnidade" placeholder="Ex: Porto Alegre / Canoas" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div>
+            <label class="block text-xs text-slate-400 mb-1">Local</label>
+            <input type="text" id="ataLocal" placeholder="Ex: Base Operacional" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <span class="block text-xs font-semibold text-slate-300 mb-2">Tipo de Treinamento:</span>
+            <div class="flex flex-wrap gap-3">
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="radio" name="ataTipo" value="Inicial" class="accent-sky-400 w-4 h-4" />
+                <span>Inicial</span>
+              </label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="radio" name="ataTipo" value="Reciclagem / Qualidade" checked class="accent-sky-400 w-4 h-4" />
+                <span>Reciclagem / Qualidade</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+            <span class="block text-xs font-semibold text-slate-300 mb-2">Modalidade:</span>
+            <div class="flex flex-wrap gap-3">
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="radio" name="ataModalidade" value="Teórico-Prático" checked class="accent-sky-400 w-4 h-4" />
+                <span>Teórico-Prático</span>
+              </label>
+              <label class="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="radio" name="ataModalidade" value="Campo" class="accent-sky-400 w-4 h-4" />
+                <span>Campo</span>
+              </label>
+            </div>
+          </div>
+        </div>
+        <p id="gpsInfoAta" class="text-[11px] text-emerald-400 hidden"></p>
+      </section>
+
+      <!-- 2 e 3. Conteúdo Programático -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-3">
+        <div class="flex items-center justify-between cursor-pointer" onclick="toggleConteudoAta()">
+          <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">
+            2. Objetivo &amp; 3. Conteúdo Programático
+          </h2>
+          <span id="toggleIconAta" class="text-xs text-slate-400 bg-slate-800 px-2.5 py-1 rounded-lg">Mostrar / Editar ▼</span>
+        </div>
+
+        <div id="conteudoBoxAta" class="hidden space-y-3 pt-2 border-t border-slate-800">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">2. Objetivo do Treinamento</label>
+            <textarea id="ataObjetivo" rows="3" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-sky-400 focus:outline-none">Alinhar e certificar os colaboradores nas melhores práticas de manuseio e terminação de fibra óptica, com ênfase na excelência do processo de conectorização e padronização da clivagem, garantindo os níveis de atenuação óptica dentro dos padrões de qualidade e conformidade da Unifique, mitigando falhas na rede de acesso e clientes.</textarea>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">3. Conteúdo Programático Ministrado</label>
+            <textarea id="ataConteudo" rows="7" class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-xs sm:text-sm text-slate-200 focus:border-sky-400 focus:outline-none">Módulo I - Conectorização em Campo: Padrões de conectores utilizados pela Unifique (SC/APC e conectores pré-polidos mecânicos); técnica correta de montagem, travamento e carcaça; critérios de aceitação (Insertion Loss e medição de potência óptica).
+Módulo II - Padronização na Clivagem da Fibra: Impacto do ângulo de clivagem na refletância e atenuação; calibração, uso correto e posicionamento no clivador de precisão; limpeza periódica dos sulcos em V, canaletas e lâmina.
+Módulo III - Revisão dos Processos Operacionais: POP de atendimento e instalação de assinante; decapagem adequada do cabo drop/fibra sem estresse mecânico; inspeção óptica visual com VFL (caneta laser) e conferência de integridade.
+Módulo IV - Cautelas, Segurança e Boas Práticas: Descarte seguro de cacos de fibra em recipiente adequado; limpeza de ferrolhos com álcool isopropílico (99,8%) e lenço sem fiapos; cuidados ergonômicos e uso obrigatório de EPIs (óculos com proteção lateral).</textarea>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. Participantes (Nome, CPF e Assinatura) -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700/80 pb-2">
+          <div>
+            <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400">
+              4. Participantes (Nome, CPF e Assinatura)
+            </h2>
+            <p class="text-xs text-slate-400">Toque em "Assinar" para abrir o quadro em tela cheia.</p>
+          </div>
+          <span id="contadorAssinadosAta" class="text-xs font-semibold bg-sky-500/20 text-sky-300 border border-sky-500/30 px-3 py-1 rounded-full">
+            0 assinados
+          </span>
+        </div>
+
+        <div class="hidden sm:grid sm:grid-cols-12 gap-3 px-2 text-xs font-semibold text-slate-400 uppercase">
+          <div class="col-span-1 text-center">Nº</div>
+          <div class="col-span-5">Nome Completo</div>
+          <div class="col-span-3">CPF</div>
+          <div class="col-span-3 text-center">Assinatura</div>
+        </div>
+
+        <div id="listaParticipantesAta" class="space-y-3"></div>
+
+        <button onclick="adicionarParticipanteAta()" class="w-full py-3 rounded-xl border-2 border-dashed border-sky-500/40 hover:border-sky-400 hover:bg-sky-500/10 text-sky-300 font-semibold text-sm transition">
+          + Adicionar Participante
+        </button>
+      </section>
+
+      <!-- 5 e 6. Parecer e Validação -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 space-y-4">
+        <h2 class="text-sm font-bold uppercase tracking-wider text-sky-400 border-b border-slate-700/80 pb-2">
+          5. Parecer da Qualidade &amp; 6. Validação
+        </h2>
+
+        <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 space-y-2">
+          <span class="block text-xs font-semibold text-slate-300">Parecer Técnico da Qualidade:</span>
+          <label class="flex items-start gap-2.5 text-sm cursor-pointer">
+            <input type="radio" name="ataParecer" value="Turma 100% Qualificada e Habilitada aos Padrões Unifique." checked class="accent-sky-400 w-4 h-4 mt-0.5" />
+            <span>Turma 100% Qualificada e Habilitada aos Padrões Unifique.</span>
+          </label>
+          <label class="flex items-start gap-2.5 text-sm cursor-pointer">
+            <input type="radio" name="ataParecer" value="Necessidade de Acompanhamento em Campo para casos específicos." class="accent-sky-400 w-4 h-4 mt-0.5" />
+            <span>Necessidade de Acompanhamento em Campo para casos específicos.</span>
+          </label>
+        </div>
+
+        <div>
+          <label class="block text-xs text-slate-400 mb-1">Observações Gerais</label>
+          <textarea id="ataObs" rows="2" placeholder="Anotações adicionais..." class="w-full bg-slate-900/90 border border-slate-700 rounded-xl p-3 text-sm text-white focus:border-sky-400 focus:outline-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+            <span class="block text-xs font-bold text-sky-300 uppercase">Executor (Técnico de Qualidade)</span>
+            <input type="text" id="ataNomeExecutor" placeholder="Nome do Técnico de Qualidade" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+            <div onclick="abrirModalAssinatura('ata_executor')" id="boxSigAtaExecutor" class="sig-box h-20 rounded-xl border border-dashed border-slate-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
+              <span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>
+            </div>
+          </div>
+
+          <div class="bg-slate-900/70 p-3.5 rounded-xl border border-slate-800 space-y-2.5">
+            <span class="block text-xs font-bold text-sky-300 uppercase">Gestor / Líder dos Colaboradores</span>
+            <input type="text" id="ataNomeGestor" placeholder="Nome do Gestor / Líder" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+            <div onclick="abrirModalAssinatura('ata_gestor')" id="boxSigAtaGestor" class="sig-box h-20 rounded-xl border border-dashed border-slate-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden relative">
+              <span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ==================== MODAL DE ASSINATURA EM TELA CHEIA ==================== -->
+  <div id="modalAssinatura" class="fixed inset-0 z-50 bg-slate-950 hidden flex-col">
+    <div class="bg-[#142178] px-4 py-3 flex items-center justify-between border-b border-sky-400/30">
+      <div class="truncate pr-2">
+        <p class="text-[11px] uppercase tracking-wider text-sky-200 font-semibold">Assinatura Digital na Tela</p>
+        <h3 id="modalSignatarioInfo" class="text-sm sm:text-base font-bold text-white truncate">Signatário</h3>
+      </div>
+      <button onclick="fecharModalAssinatura()" class="px-3 py-1.5 rounded-lg bg-slate-900/70 text-slate-200 text-xs font-semibold hover:bg-slate-800">
+        ✕ Cancelar
+      </button>
+    </div>
+
+    <div class="flex-1 p-3 sm:p-6 flex flex-col justify-center bg-slate-900">
+      <div class="relative w-full h-full max-h-[65vh] bg-white rounded-2xl shadow-2xl border-2 border-sky-400 overflow-hidden flex items-center justify-center">
+        <canvas id="signatureCanvas" class="w-full h-full block"></canvas>
+        <div class="pointer-events-none absolute bottom-6 left-6 right-6 border-b border-slate-300 text-center">
+          <span class="text-[11px] text-slate-400 uppercase tracking-widest">Assine com o dedo acima desta linha</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-slate-950 px-4 py-3.5 border-t border-slate-800 flex items-center justify-between gap-3">
+      <button onclick="limparCanvas()" class="flex-1 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-semibold text-sm transition">
+        🗑️ Limpar Traço
+      </button>
+      <button onclick="confirmarAssinatura()" class="flex-[2] py-3 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm shadow-lg shadow-emerald-500/20 transition">
+        ✓ Confirmar Assinatura
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================== MODAL PRÉ-VISUALIZAÇÃO & PDF A4 ==================== -->
+  <div id="preview-modal" class="fixed inset-0 z-50 bg-slate-900/95 hidden overflow-y-auto">
+    <div id="preview-toolbar" class="sticky top-0 z-10 bg-[#142178] text-white px-4 py-3 shadow-lg flex flex-wrap items-center justify-between gap-2">
+      <button onclick="fecharPreviewPDF()" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-semibold">
+        ← Voltar e Editar
+      </button>
+      <span class="text-xs sm:text-sm font-bold hidden sm:inline">Pré-visualização Oficial A4</span>
+      <button onclick="window.print()" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs sm:text-sm shadow">
+        💾 Salvar como PDF / Imprimir
+      </button>
+    </div>
+
+    <div class="p-3 sm:p-6 flex justify-center">
+      <div id="pdf-sheet" class="bg-white text-slate-900 w-full max-w-[210mm] p-5 sm:p-7 rounded shadow-2xl text-xs leading-normal"></div>
+    </div>
+  </div>
+
+  <script>
+    // ================= DADOS DO CHECKLIST DE EPI / EPC =================
+    const ITENS_EPI_PADRAO = [
+      { nome: 'Capacete Aba Total Classe "B" Com Jugular', tipoOculos: false },
+      { nome: 'Cinto De Segurança Tipo Paraquedista Tipo H', tipoOculos: false },
+      { nome: 'Calçado De Segurança NR 10', tipoOculos: false },
+      { nome: 'Talabarte De Posicionamento Com Mosquetão', tipoOculos: false },
+      { nome: 'Cones De Borracha Com Faixas Refletivas (5 Por Escada) tamanho 75cm', tipoOculos: false },
+      { nome: 'Óculos De Segurança', tipoOculos: true },
+      { nome: 'Óculos De Sobrepor De Segurança', tipoOculos: true },
+      { nome: 'Luva Isolante Baixa Tensão BT 500V', tipoOculos: false },
+      { nome: 'Luva De Cobertura De Vaqueta', tipoOculos: false },
+      { nome: 'Luva De Vaqueta (Curta)', tipoOculos: false },
+      { nome: 'Trava-Quedas Para Corda De 12mm Com Mosquetão', tipoOculos: false },
+      { nome: 'Vestimenta De Segurança - Calça', tipoOculos: false },
+      { nome: 'Vestimenta De Segurança - Jaqueta', tipoOculos: false },
+      { nome: 'Protetor Solar', tipoOculos: false },
+      { nome: 'Detector De Tensão', tipoOculos: false },
+      { nome: 'Fita De Ancoragem Para Escada - Eureka', tipoOculos: false },
+      { nome: 'Corda Para Amarração De Topo 12mm - 2 M', tipoOculos: false },
+      { nome: 'Corda 20 Metros Para Linha De Vida - 12 Mm', tipoOculos: false },
+      { nome: 'Fita De Ancoragem 1.2 M', tipoOculos: false },
+      { nome: 'Fita De Ancoragem 2.0 M', tipoOculos: false },
+      { nome: 'Mosquetão Oval (3 Unidades)', tipoOculos: false },
+      { nome: 'Fita Para Amarração De Escada - Catraca - Nbr 5426; Nbr 15834 E Nbr 15837', tipoOculos: false }
+    ];
+
+    let estadoEpis = ITENS_EPI_PADRAO.map((item, i) => ({
+      id: i,
+      nome: item.nome,
+      tipoOculos: item.tipoOculos,
+      lente: 'Transparente',
+      status: '' // 'SIM' | 'NAO' | 'NA'
+    }));
+
+    let sigEpiFiscal = { assinatura: null, timestamp: null };
+    let sigEpiRep = { assinatura: null, timestamp: null };
+    let gpsEpi = '';
+
+    // ================= DADOS DA ATA DE TREINAMENTO =================
+    let participantesAta = [
+      { id: 1, nome: '', cpf: '', assinatura: null, timestamp: null },
+      { id: 2, nome: '', cpf: '', assinatura: null, timestamp: null },
+      { id: 3, nome: '', cpf: '', assinatura: null, timestamp: null }
+    ];
+    let sigAtaExecutor = { assinatura: null, timestamp: null };
+    let sigAtaGestor = { assinatura: null, timestamp: null };
+    let gpsAta = '';
+
+    // ================= CANVAS DE ASSINATURA =================
+    let alvoAssinatura = null;
+    const modalSig = document.getElementById('modalAssinatura');
+    const canvas = document.getElementById('signatureCanvas');
+    const ctx = canvas.getContext('2d');
+    let desenhando = false;
+    let temTraco = false;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const hoje = new Date().toISOString().split('T')[0];
+      document.getElementById('epiData').value = hoje;
+      document.getElementById('ataData').value = hoje;
+      renderizarListaEpis();
+      renderizarListaAta();
+    });
+
+    // Navegação Menu <-> Módulos
+    function abrirModulo(modulo) {
+      document.getElementById('menu-screen').classList.add('hidden');
+      document.getElementById('view-epi').classList.add('hidden');
+      document.getElementById('view-ata').classList.add('hidden');
+
+      if (modulo === 'epi') {
+        document.getElementById('view-epi').classList.remove('hidden');
+      } else {
+        document.getElementById('view-ata').classList.remove('hidden');
+      }
+      window.scrollTo(0, 0);
+    }
+
+    function voltarMenu() {
+      document.getElementById('view-epi').classList.add('hidden');
+      document.getElementById('view-ata').classList.add('hidden');
+      document.getElementById('menu-screen').classList.remove('hidden');
+      window.scrollTo(0, 0);
+    }
+
+    function formatarCPF(valor) {
+      return valor
+        .replace(/\D/g, '')
+        .slice(0, 11)
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+    }
+
+    function capturarGPS(tipo) {
+      const btn = document.getElementById(tipo === 'epi' ? 'btnGpsEpi' : 'btnGpsAta');
+      const info = document.getElementById(tipo === 'epi' ? 'gpsInfoEpi' : 'gpsInfoAta');
+      if (!navigator.geolocation) {
+        alert('Geolocalização não suportada neste navegador.');
+        return;
+      }
+      btn.textContent = '⏳ Obtendo...';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const coords = `${pos.coords.latitude.toFixed(6)}, ${pos.coords.longitude.toFixed(6)}`;
+          if (tipo === 'epi') gpsEpi = coords; else gpsAta = coords;
+          btn.textContent = '✓ GPS Anexado';
+          info.textContent = `Coordenadas registradas: ${coords}`;
+          info.classList.remove('hidden');
+        },
+        () => {
+          btn.textContent = '📍 Anexar GPS';
+          alert('Não foi possível obter a localização. Verifique a permissão de GPS.');
+        },
+        { enableHighAccuracy: true, timeout: 8000 }
+      );
+    }
+
+    // ================= FUNÇÕES CHECKLIST EPI =================
+    function renderizarListaEpis() {
+      const container = document.getElementById('listaEpisContainer');
+      container.innerHTML = '';
+
+      estadoEpis.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5';
+
+        const seletorLente = item.tipoOculos ? `
+          <div class="flex items-center gap-3 mt-1.5 text-xs text-sky-300">
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="lente_${idx}" value="Transparente" ${item.lente === 'Transparente' ? 'checked' : ''} onchange="estadoEpis[${idx}].lente='Transparente'" class="accent-sky-400" />
+              <span>Transparente</span>
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="lente_${idx}" value="Fumê" ${item.lente === 'Fumê' ? 'checked' : ''} onchange="estadoEpis[${idx}].lente='Fumê'" class="accent-sky-400" />
+              <span>Fumê</span>
+            </label>
+          </div>
+        ` : '';
+
+        div.innerHTML = `
+          <div class="flex-1 pr-2">
+            <div class="text-xs sm:text-sm font-medium text-slate-100">
+              <span class="text-sky-400 font-bold mr-1">${idx + 1}.</span> ${item.nome}
+            </div>
+            ${seletorLente}
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 sm:w-52 shrink-0">
+            <button onclick="setStatusEpi(${idx}, 'SIM')" class="epi-btn py-1.5 rounded-lg text-xs font-bold border ${item.status === 'SIM' ? 'bg-emerald-500 text-slate-950 border-emerald-400' : 'bg-slate-950 text-slate-400 border-slate-700 hover:border-slate-500'}">
+              SIM
+            </button>
+            <button onclick="setStatusEpi(${idx}, 'NAO')" class="epi-btn py-1.5 rounded-lg text-xs font-bold border ${item.status === 'NAO' ? 'bg-rose-500 text-white border-rose-400' : 'bg-slate-950 text-slate-400 border-slate-700 hover:border-slate-500'}">
+              NÃO
+            </button>
+            <button onclick="setStatusEpi(${idx}, 'NA')" class="epi-btn py-1.5 rounded-lg text-xs font-bold border ${item.status === 'NA' ? 'bg-amber-400 text-slate-950 border-amber-300' : 'bg-slate-950 text-slate-400 border-slate-700 hover:border-slate-500'}">
+              N/A
+            </button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function setStatusEpi(idx, status) {
+      estadoEpis[idx].status = status;
+      renderizarListaEpis();
+    }
+
+    function marcarTodosEpiSim() {
+      estadoEpis.forEach(item => item.status = 'SIM');
+      renderizarListaEpis();
+    }
+
+    function limparEPI() {
+      if (!confirm('Limpar todos os campos e assinaturas da ficha de EPI?')) return;
+      estadoEpis.forEach(item => { item.status = ''; item.lente = 'Transparente'; });
+      sigEpiFiscal = { assinatura: null, timestamp: null };
+      sigEpiRep = { assinatura: null, timestamp: null };
+      document.getElementById('epiFiscal').value = '';
+      document.getElementById('epiEmpresaFiscalizada').value = '';
+      document.getElementById('epiTecnico').value = '';
+      document.getElementById('epiMunicipio').value = '';
+      document.getElementById('epiSetor').value = '';
+      document.getElementById('epiObservacoes').value = '';
+      document.getElementById('epiNomeAssinaturaFiscal').value = '';
+      document.getElementById('epiNomeAssinaturaRep').value = '';
+      document.getElementById('epiCpfRep').value = '';
+      document.getElementById('boxSigEpiFiscal').innerHTML = '<span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>';
+      document.getElementById('boxSigEpiRep').innerHTML = '<span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>';
+      renderizarListaEpis();
+    }
+
+    // ================= FUNÇÕES ATA DE TREINAMENTO =================
+    function toggleConteudoAta() {
+      const box = document.getElementById('conteudoBoxAta');
+      const icon = document.getElementById('toggleIconAta');
+      box.classList.toggle('hidden');
+      icon.textContent = box.classList.contains('hidden') ? 'Mostrar / Editar ▼' : 'Ocultar ▲';
+    }
+
+    function adicionarParticipanteAta() {
+      participantesAta.push({ id: Date.now(), nome: '', cpf: '', assinatura: null, timestamp: null });
+      renderizarListaAta();
+    }
+
+    function removerParticipanteAta(idx) {
+      if (participantesAta.length <= 1) return;
+      participantesAta.splice(idx, 1);
+      renderizarListaAta();
+    }
+
+    function atualizarCampoAta(idx, campo, valor) {
+      if (campo === 'cpf') valor = formatarCPF(valor);
+      participantesAta[idx][campo] = valor;
+    }
+
+    function renderizarListaAta() {
+      const container = document.getElementById('listaParticipantesAta');
+      container.innerHTML = '';
+      let assinados = 0;
+
+      participantesAta.forEach((p, idx) => {
+        if (p.assinatura) assinados++;
+        const row = document.createElement('div');
+        row.className = 'bg-slate-900/80 border border-slate-700/80 rounded-xl p-3 sm:p-2.5 grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-center';
+        row.innerHTML = `
+          <div class="sm:col-span-1 flex items-center justify-between sm:justify-center">
+            <span class="text-xs font-bold text-sky-400 bg-sky-500/10 px-2.5 py-1 rounded-md">#${idx + 1}</span>
+            ${participantesAta.length > 1 ? `<button onclick="removerParticipanteAta(${idx})" class="sm:hidden text-xs text-rose-400 px-2 py-1">Remover</button>` : ''}
+          </div>
+          <div class="sm:col-span-5">
+            <input type="text" value="${p.nome}" oninput="atualizarCampoAta(${idx}, 'nome', this.value)" placeholder="Nome completo do colaborador" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div class="sm:col-span-3">
+            <input type="text" inputmode="numeric" value="${p.cpf}" oninput="this.value = formatarCPF(this.value); atualizarCampoAta(${idx}, 'cpf', this.value)" placeholder="000.000.000-00" maxlength="14" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:border-sky-400 focus:outline-none" />
+          </div>
+          <div class="sm:col-span-3 flex items-center gap-1.5">
+            <div onclick="abrirModalAssinatura(${idx})" class="sig-box flex-1 h-12 rounded-lg border ${p.assinatura ? 'border-emerald-500 bg-white' : 'border-dashed border-sky-400/60 bg-white'} flex items-center justify-center cursor-pointer overflow-hidden relative px-1">
+              ${p.assinatura
+                ? `<img src="${p.assinatura}" class="max-h-10 object-contain" alt="Assinatura" /><span class="absolute bottom-0.5 right-1 text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1 rounded">✓</span>`
+                : `<span class="text-xs font-semibold text-[#142178]">✍️ Assinar</span>`
+              }
+            </div>
+            ${participantesAta.length > 1 ? `<button onclick="removerParticipanteAta(${idx})" title="Remover" class="hidden sm:flex items-center justify-center w-7 h-10 text-slate-500 hover:text-rose-400">✕</button>` : ''}
+          </div>
+        `;
+        container.appendChild(row);
+      });
+
+      document.getElementById('contadorAssinadosAta').textContent = `${assinados} de ${participantesAta.length} assinados`;
+    }
+
+    function limparAta() {
+      if (!confirm('Limpar todos os campos e assinaturas da Ata de Treinamento?')) return;
+      participantesAta = [
+        { id: 1, nome: '', cpf: '', assinatura: null, timestamp: null },
+        { id: 2, nome: '', cpf: '', assinatura: null, timestamp: null },
+        { id: 3, nome: '', cpf: '', assinatura: null, timestamp: null }
+      ];
+      sigAtaExecutor = { assinatura: null, timestamp: null };
+      sigAtaGestor = { assinatura: null, timestamp: null };
+      document.getElementById('ataCarga').value = '';
+      document.getElementById('ataUnidade').value = '';
+      document.getElementById('ataLocal').value = '';
+      document.getElementById('ataObs').value = '';
+      document.getElementById('ataNomeExecutor').value = '';
+      document.getElementById('ataNomeGestor').value = '';
+      document.getElementById('boxSigAtaExecutor').innerHTML = '<span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>';
+      document.getElementById('boxSigAtaGestor').innerHTML = '<span class="text-xs font-medium text-slate-500">✍️ Toque para assinar</span>';
+      renderizarListaAta();
+    }
+
+    // ================= MODAL DE ASSINATURA COMPARTILHADO =================
+    function abrirModalAssinatura(alvo) {
+      alvoAssinatura = alvo;
+      let titulo = '';
+
+      if (alvo === 'epi_fiscal') {
+        const nome = document.getElementById('epiNomeAssinaturaFiscal').value.trim() || document.getElementById('epiFiscal').value.trim();
+        if (!nome) {
+          alert('Preencha o nome do Fiscal da Contratante antes de assinar.');
+          document.getElementById('epiNomeAssinaturaFiscal').focus();
+          return;
+        }
+        document.getElementById('epiNomeAssinaturaFiscal').value = nome;
+        titulo = `Fiscal da Contratante: ${nome}`;
+      } else if (alvo === 'epi_rep') {
+        const nome = document.getElementById('epiNomeAssinaturaRep').value.trim() || document.getElementById('epiTecnico').value.trim();
+        const cpf = document.getElementById('epiCpfRep').value.trim();
+        if (!nome || cpf.replace(/\D/g, '').length < 11) {
+          alert('Preencha o Nome e os 11 dígitos do CPF do Representante/Técnico antes de assinar.');
+          return;
+        }
+        document.getElementById('epiNomeAssinaturaRep').value = nome;
+        titulo = `${nome} — CPF: ${cpf}`;
+      } else if (alvo === 'ata_executor') {
+        const nome = document.getElementById('ataNomeExecutor').value.trim();
+        if (!nome) {
+          alert('Preencha o nome do Executor (Técnico de Qualidade) antes de assinar.');
+          document.getElementById('ataNomeExecutor').focus();
+          return;
+        }
+        titulo = `Executor: ${nome}`;
+      } else if (alvo === 'ata_gestor') {
+        const nome = document.getElementById('ataNomeGestor').value.trim();
+        if (!nome) {
+          alert('Preencha o nome do Gestor / Líder antes de assinar.');
+          document.getElementById('ataNomeGestor').focus();
+          return;
+        }
+        titulo = `Gestor/Líder: ${nome}`;
+      } else {
+        const p = participantesAta[alvo];
+        if (!p.nome.trim() || p.cpf.replace(/\D/g, '').length < 11) {
+          alert('Preencha o Nome Completo e os 11 dígitos do CPF deste participante antes de abrir a assinatura.');
+          return;
+        }
+        titulo = `${p.nome} — CPF: ${p.cpf}`;
+      }
+
+      document.getElementById('modalSignatarioInfo').textContent = titulo;
+      modalSig.classList.remove('hidden');
+      modalSig.classList.add('flex');
+      document.body.style.overflow = 'hidden';
+      setTimeout(redimensionarCanvas, 50);
+    }
+
+    function fecharModalAssinatura() {
+      modalSig.classList.add('hidden');
+      modalSig.classList.remove('flex');
+      document.body.style.overflow = '';
+      alvoAssinatura = null;
+    }
+
+    function redimensionarCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      canvas.width = rect.width * ratio;
+      canvas.height = rect.height * ratio;
+      ctx.scale(ratio, ratio);
+      ctx.lineWidth = 3;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = '#0f172a';
+      temTraco = false;
+    }
+
+    function limparCanvas() {
+      const ratio = Math.max(window.devicePixelRatio || 1, 1);
+      ctx.clearRect(0, 0, canvas.width / ratio, canvas.height / ratio);
+      temTraco = false;
+    }
+
+    function getPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      desenhando = true; temTraco = true;
+      const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+    });
+    canvas.addEventListener('mousemove', (e) => {
+      if (!desenhando) return;
+      const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+    });
+    window.addEventListener('mouseup', () => { desenhando = false; });
+
+    canvas.addEventListener('touchstart', (e) => {
+      e.preventDefault(); desenhando = true; temTraco = true;
+      const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y);
+    }, { passive: false });
+    canvas.addEventListener('touchmove', (e) => {
+      e.preventDefault(); if (!desenhando) return;
+      const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.stroke();
+    }, { passive: false });
+    canvas.addEventListener('touchend', () => { desenhando = false; });
+
+    function confirmarAssinatura() {
+      if (!temTraco) {
+        alert('Por favor, faça a assinatura antes de confirmar.');
+        return;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const agora = new Date().toLocaleString('pt-BR');
+
+      if (alvoAssinatura === 'epi_fiscal') {
+        sigEpiFiscal = { assinatura: dataUrl, timestamp: agora };
+        document.getElementById('boxSigEpiFiscal').innerHTML = `<img src="${dataUrl}" class="max-h-16 object-contain" /><span class="absolute bottom-1 right-2 text-[10px] text-slate-500">${agora}</span>`;
+      } else if (alvoAssinatura === 'epi_rep') {
+        sigEpiRep = { assinatura: dataUrl, timestamp: agora };
+        document.getElementById('boxSigEpiRep').innerHTML = `<img src="${dataUrl}" class="max-h-16 object-contain" /><span class="absolute bottom-1 right-2 text-[10px] text-slate-500">${agora}</span>`;
+      } else if (alvoAssinatura === 'ata_executor') {
+        sigAtaExecutor = { assinatura: dataUrl, timestamp: agora };
+        document.getElementById('boxSigAtaExecutor').innerHTML = `<img src="${dataUrl}" class="max-h-16 object-contain" /><span class="absolute bottom-1 right-2 text-[10px] text-slate-500">${agora}</span>`;
+      } else if (alvoAssinatura === 'ata_gestor') {
+        sigAtaGestor = { assinatura: dataUrl, timestamp: agora };
+        document.getElementById('boxSigAtaGestor').innerHTML = `<img src="${dataUrl}" class="max-h-16 object-contain" /><span class="absolute bottom-1 right-2 text-[10px] text-slate-500">${agora}</span>`;
+      } else {
+        participantesAta[alvoAssinatura].assinatura = dataUrl;
+        participantesAta[alvoAssinatura].timestamp = agora;
+        renderizarListaAta();
+      }
+      fecharModalAssinatura();
+    }
+
+    async function gerarHash(texto) {
+      try {
+        if (window.crypto && window.crypto.subtle) {
+          const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(texto));
+          return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+      } catch (e) {}
+      let h = 0;
+      for (let i = 0; i < texto.length; i++) { h = ((h << 5) - h) + texto.charCodeAt(i); h |= 0; }
+      return 'LOCAL-' + Math.abs(h).toString(16).toUpperCase().padStart(8, '0');
+    }
+
+    // ================= GERAÇÃO DE PDF: CHECKLIST EPI / EPC =================
+    async function gerarPDFEpi() {
+      const empFisc = document.getElementById('epiEmpresaFiscalizadora').value || 'UNIFIQUE TELECOMUNICAÇÕES S/A';
+      const fiscal = document.getElementById('epiFiscal').value || '______________________';
+      const dataIn = document.getElementById('epiData').value;
+      const dataFmt = dataIn ? dataIn.split('-').reverse().join('/') : '____/____/____';
+      const empAlvo = document.getElementById('epiEmpresaFiscalizada').value || '______________________';
+      const tecnico = document.getElementById('epiTecnico').value || '______________________';
+      const municipio = document.getElementById('epiMunicipio').value || '________________';
+      const setor = document.getElementById('epiSetor').value || '________________';
+      const boasCond = document.querySelector('input[name="epiBoasCondicoes"]:checked')?.value || 'SIM';
+      const obs = document.getElementById('epiObservacoes').value || '';
+      const nomeFiscAss = document.getElementById('epiNomeAssinaturaFiscal').value || fiscal;
+      const nomeRepAss = document.getElementById('epiNomeAssinaturaRep').value || tecnico;
+      const cpfRep = document.getElementById('epiCpfRep').value || '___.___.___-__';
+
+      const linhasEpi = estadoEpis.map(item => {
+        let desc = item.nome;
+        if (item.tipoOculos) {
+          desc += ` &nbsp; ( ${item.lente === 'Transparente' ? 'X' : ' '} ) Transparente &nbsp; ( ${item.lente === 'Fumê' ? 'X' : ' '} ) Fumê`;
+        }
+        return `
+          <tr>
+            <td style="border: 1px solid #94a3b8; padding: 3.5px 6px; font-size: 9px;">${desc}</td>
+            <td style="border: 1px solid #94a3b8; padding: 3.5px; text-align: center; font-weight: bold; font-size: 9px; width: 42px;">${item.status === 'SIM' ? 'X' : ''}</td>
+            <td style="border: 1px solid #94a3b8; padding: 3.5px; text-align: center; font-weight: bold; font-size: 9px; width: 42px;">${item.status === 'NAO' ? 'X' : ''}</td>
+            <td style="border: 1px solid #94a3b8; padding: 3.5px; text-align: center; font-weight: bold; font-size: 9px; width: 42px;">${item.status === 'NA' ? 'X' : ''}</td>
+          </tr>
+        `;
+      }).join('');
+
+      const hash = await gerarHash(JSON.stringify({ empAlvo, tecnico, dataFmt, estadoEpis, cpfRep }));
+      document.title = `Checklist_EPI_EPC_${tecnico.replace(/\s+/g, '_')}_${dataIn || 'Unifique'}`;
+
+      const sheet = document.getElementById('pdf-sheet');
+      sheet.innerHTML = `
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
+          <tr>
+            <td style="border: 1px solid #94a3b8; padding: 6px; width: 25%; text-align: center;">
+              <div style="font-size: 20px; font-weight: 900; color: #142178; letter-spacing: -1px;">unifique</div>
+            </td>
+            <td style="border: 1px solid #94a3b8; padding: 6px; width: 50%; text-align: center; background: #142178; color: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+              <div style="font-size: 12px; font-weight: bold;">FICHA DE CHECKLIST DE EPI/EPC</div>
+              <div style="font-size: 10px; letter-spacing: 1px;">PRESENCIAL</div>
+            </td>
+            <td style="border: 1px solid #94a3b8; padding: 4px; width: 25%; font-size: 8px; text-align: center;">
+              <strong>DATA DE ELABORAÇÃO:</strong><br>12/03/2023<br>
+              <strong>REVISÃO:</strong> REV00
+            </td>
+          </tr>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px; font-size: 9px;">
+          <tr>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px;" colspan="2"><strong>Empresa fiscalizadora:</strong> ${empFisc}</td>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px;"><strong>Data:</strong> ${dataFmt}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px;" colspan="3"><strong>Fiscal:</strong> ${fiscal}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px;" colspan="3"><strong>Empresa Fiscalizada:</strong> ${empAlvo}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px; width: 45%;"><strong>Técnico:</strong> ${tecnico}</td>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px; width: 30%;"><strong>Município:</strong> ${municipio}</td>
+            <td style="border: 1px solid #94a3b8; padding: 4px 6px; width: 25%;"><strong>Setor:</strong> ${setor}</td>
+          </tr>
+        </table>
+
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 6px;">
+          <thead>
+            <tr style="background: #142178; color: #fff; font-size: 9px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+              <th style="border: 1px solid #94a3b8; padding: 4px 6px; text-align: left;">DESCRIÇÃO DOS EPI'S / EPC'S</th>
+              <th style="border: 1px solid #94a3b8; padding: 4px; text-align: center;">SIM</th>
+              <th style="border: 1px solid #94a3b8; padding: 4px; text-align: center;">NÃO</th>
+              <th style="border: 1px solid #94a3b8; padding: 4px; text-align: center;">N/A</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhasEpi}
+          </tbody>
+        </table>
+
+        <div style="border: 1px solid #94a3b8; padding: 5px 8px; font-size: 9.5px; margin-bottom: 6px; background: #f8fafc;">
+          <strong>• Os EPIs e EPC estão em boas condições de uso?</strong> &nbsp;&nbsp;&nbsp;
+          ( ${boasCond === 'SIM' ? 'X' : ' '} ) SIM &nbsp;&nbsp;&nbsp; ( ${boasCond === 'NÃO' ? 'X' : ' '} ) NÃO
+          ${obs ? `<div style="margin-top: 3px; font-size: 8.5px; color: #334155;"><strong>Obs.:</strong> ${obs}</div>` : ''}
+        </div>
+
+        <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+          <tr>
+            <td style="width: 50%; border: 1px solid #94a3b8; padding: 6px; text-align: center; vertical-align: bottom;">
+              ${sigEpiFiscal.assinatura ? `<img src="${sigEpiFiscal.assinatura}" style="max-height: 38px; margin: 0 auto 3px;" />` : '<div style="height: 38px;"></div>'}
+              <div style="border-top: 1px solid #334155; padding-top: 3px;">
+                <strong>Fiscal da Contratante</strong><br>
+                ${nomeFiscAss}
+              </div>
+            </td>
+            <td style="width: 50%; border: 1px solid #94a3b8; padding: 6px; text-align: center; vertical-align: bottom;">
+              ${sigEpiRep.assinatura ? `<img src="${sigEpiRep.assinatura}" style="max-height: 38px; margin: 0 auto 3px;" />` : '<div style="height: 38px;"></div>'}
+              <div style="border-top: 1px solid #334155; padding-top: 3px;">
+                <strong>Representante no local da fiscalização (Contratada)</strong><br>
+                ${nomeRepAss} &nbsp;|&nbsp; <strong>CPF:</strong> ${cpfRep}
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="margin-top: 5px; font-size: 7.5px; color: #64748b; text-align: center;">
+          Registro Digital • ${gpsEpi ? `GPS: ${gpsEpi} • ` : ''}Hash SHA-256: ${hash}
+        </div>
+      `;
+
+      document.getElementById('preview-modal').classList.remove('hidden');
+      setTimeout(() => window.print(), 300);
+    }
+
+    // ================= GERAÇÃO DE PDF: ATA DE TREINAMENTO =================
+    async function gerarPDFAta() {
+      const dataIn = document.getElementById('ataData').value;
+      const dataFmt = dataIn ? dataIn.split('-').reverse().join('/') : '____/____/____';
+      const carga = document.getElementById('ataCarga').value || '____';
+      const unidade = document.getElementById('ataUnidade').value || '______________________';
+      const local = document.getElementById('ataLocal').value || '______________________';
+      const tipo = document.querySelector('input[name="ataTipo"]:checked')?.value || '';
+      const modalidade = document.querySelector('input[name="ataModalidade"]:checked')?.value || '';
+      const objetivo = document.getElementById('ataObjetivo').value;
+      const conteudo = document.getElementById('ataConteudo').value.replace(/\n/g, '<br>');
+      const parecer = document.querySelector('input[name="ataParecer"]:checked')?.value || '';
+      const obs = document.getElementById('ataObs').value || 'Sem observações adicionais.';
+      const nomeExec = document.getElementById('ataNomeExecutor').value || '________________________';
+      const nomeGest = document.getElementById('ataNomeGestor').value || '________________________';
+
+      const validos = participantesAta.filter(p => p.nome.trim() !== '' || p.assinatura !== null);
+      if (validos.length === 0) {
+        alert('Adicione pelo menos um participante antes de gerar o PDF.');
+        return;
+      }
+
+      const linhasTabela = validos.map((p, idx) => `
+        <tr>
+          <td style="padding: 5px; border: 1px solid #cbd5e1; text-align: center; font-weight: bold;">${idx + 1}</td>
+          <td style="padding: 5px; border: 1px solid #cbd5e1;">${p.nome || '-'}</td>
+          <td style="padding: 5px; border: 1px solid #cbd5e1; text-align: center;">${p.cpf || '-'}</td>
+          <td style="padding: 4px; border: 1px solid #cbd5e1; text-align: center; height: 40px;">
+            ${p.assinatura
+              ? `<img src="${p.assinatura}" style="max-height: 30px; display: inline-block;" /><br><span style="font-size: 7.5px; color: #64748b;">${p.timestamp}</span>`
+              : `<span style="color: #94a3b8; font-size: 8.5px;">Pendente</span>`
+            }
+          </td>
+        </tr>
+      `).join('');
+
+      const hash = await gerarHash(JSON.stringify({ dataFmt, unidade, local, validos, nomeExec, nomeGest }));
+      document.title = `Ata_Treinamento_Qualidade_${dataIn || 'Unifique'}`;
+
+      const sheet = document.getElementById('pdf-sheet');
+      sheet.innerHTML = `
+        <div style="border-bottom: 3px solid #142178; padding-bottom: 8px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="font-size: 22px; font-weight: 900; color: #142178; letter-spacing: -1px;">unifique</div>
+          <div style="text-align: right;">
+            <div style="font-size: 12px; font-weight: bold; color: #142178;">ATA DE TREINAMENTO E QUALIFICAÇÃO TÉCNICA</div>
+            <div style="font-size: 9.5px; color: #475569;">Sistema de Gestão da Qualidade &amp; Operações de Campo</div>
+          </div>
+        </div>
+
+        <div style="background: #142178; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 9.5px; margin-bottom: 5px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          1. IDENTIFICAÇÃO E DADOS GERAIS
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9.5px;">
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 4px 6px; width: 50%;"><strong>Data de Realização:</strong> ${dataFmt}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 4px 6px; width: 50%;"><strong>Carga Horária:</strong> ${carga} Horas</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 4px 6px;"><strong>Unidade:</strong> ${unidade}</td>
+            <td style="border: 1px solid #cbd5e1; padding: 4px 6px;"><strong>Local:</strong> ${local}</td>
+          </tr>
+          <tr>
+            <td style="border: 1px solid #cbd5e1; padding: 4px 6px;"><strong>Tipo:</strong> ( ${tipo === 'Inicial' ? 'X' : ' '} ) Inicial &nbsp;&nbsp; ( ${tipo === 'Reciclagem / Qualidade' ? 'X' : ' '} ) Reciclagem / Qualidade</td>
+            <td style="border: 1px solid #cbd5e1; padding: 4px 6px;"><strong>Modalidade:</strong> ( ${modalidade === 'Teórico-Prático' ? 'X' : ' '} ) Teórico-Prático &nbsp;&nbsp; ( ${modalidade === 'Campo' ? 'X' : ' '} ) Campo</td>
+          </tr>
+        </table>
+
+        <div style="background: #142178; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 9.5px; margin-bottom: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          2. OBJETIVO DO TREINAMENTO
+        </div>
+        <p style="font-size: 9px; text-align: justify; margin-bottom: 8px; color: #1e293b;">${objetivo}</p>
+
+        <div style="background: #142178; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 9.5px; margin-bottom: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          3. CONTEÚDO PROGRAMÁTICO MINISTRADO
+        </div>
+        <div style="font-size: 8.5px; margin-bottom: 8px; color: #1e293b; line-height: 1.35;">${conteudo}</div>
+
+        <div style="background: #142178; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 9.5px; margin-bottom: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          4. REGISTRO DE PARTICIPANTES
+        </div>
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 9.5px; border: 1px solid #cbd5e1;">
+          <thead>
+            <tr style="background: #e2e8f0; color: #0f172a; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+              <th style="padding: 5px; border: 1px solid #cbd5e1; width: 8%;">Nº</th>
+              <th style="padding: 5px; border: 1px solid #cbd5e1; text-align: left; width: 44%;">Nome Completo</th>
+              <th style="padding: 5px; border: 1px solid #cbd5e1; width: 22%;">CPF</th>
+              <th style="padding: 5px; border: 1px solid #cbd5e1; width: 26%;">Assinatura</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhasTabela}
+          </tbody>
+        </table>
+
+        <div style="background: #142178; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 9.5px; margin-bottom: 4px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          5. OBSERVAÇÕES E PARECER DO INSTRUTOR / QUALIDADE
+        </div>
+        <div style="border: 1px solid #cbd5e1; padding: 5px 6px; font-size: 9px; margin-bottom: 10px;">
+          <p style="margin-bottom: 3px;"><strong>Parecer Técnico:</strong> ( X ) ${parecer}</p>
+          <p><strong>Observações:</strong> ${obs}</p>
+        </div>
+
+        <div style="background: #142178; color: #fff; font-weight: bold; padding: 4px 8px; font-size: 9.5px; margin-bottom: 5px; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+          6. VALIDAÇÃO E ASSINATURAS
+        </div>
+        <table style="width: 100%; border-collapse: collapse; font-size: 9px;">
+          <tr>
+            <td style="width: 50%; border: 1px solid #cbd5e1; padding: 6px; text-align: center; vertical-align: bottom;">
+              ${sigAtaExecutor.assinatura ? `<img src="${sigAtaExecutor.assinatura}" style="max-height: 40px; margin: 0 auto 3px;" />` : '<div style="height: 40px;"></div>'}
+              <div style="border-top: 1px solid #334155; padding-top: 3px;">
+                <strong>EXECUTOR DO TREINAMENTO DE QUALIDADE</strong><br>
+                Nome: ${nomeExec} | Cargo: Técnico de Qualidade<br>
+                Data: ${dataFmt}
+              </div>
+            </td>
+            <td style="width: 50%; border: 1px solid #cbd5e1; padding: 6px; text-align: center; vertical-align: bottom;">
+              ${sigAtaGestor.assinatura ? `<img src="${sigAtaGestor.assinatura}" style="max-height: 40px; margin: 0 auto 3px;" />` : '<div style="height: 40px;"></div>'}
+              <div style="border-top: 1px solid #334155; padding-top: 3px;">
+                <strong>GESTOR DOS COLABORADORES AVALIADOS</strong><br>
+                Nome: ${nomeGest} | Cargo: Líder / Gestor<br>
+                Data: ${dataFmt}
+              </div>
+            </td>
+          </tr>
+        </table>
+
+        <div style="margin-top: 8px; padding-top: 5px; border-top: 1px dashed #94a3b8; font-size: 7.5px; color: #64748b; text-align: center;">
+          Documento gerado eletronicamente • ${gpsAta ? `GPS: ${gpsAta} • ` : ''}Integridade SHA-256: ${hash}
+        </div>
+      `;
+
+      document.getElementById('preview-modal').classList.remove('hidden');
+      setTimeout(() => window.print(), 300);
+    }
+
+    function fecharPreviewPDF() {
+      document.getElementById('preview-modal').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>
