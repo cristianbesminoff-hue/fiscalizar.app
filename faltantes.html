@@ -21,7 +21,7 @@ table{width:100%;border-collapse:collapse}td{padding:9px 8px;border-bottom:1px s
 #pm{position:fixed;inset:0;background:#0007;display:none;z-index:2000;overflow:auto}#pm>div{background:#f2f4f7;margin:16px 8px;border-radius:12px;padding:14px}
 #gate{position:fixed;inset:0;background:#0b5cad;z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}.gb{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:360px}
 #rep{display:none}#dg{position:fixed;inset:0;background:#0007;display:none;z-index:2500;align-items:center;justify-content:center;padding:16px}.dgb{background:#fff;border-radius:14px;padding:16px;width:100%;max-width:380px}.og{display:grid;gap:6px;margin-top:10px}.og button{background:#e3e8ef;color:#1a1d21;padding:12px 0}
-@media print{body>*:not(#rep){display:none!important}#rep{display:block;padding:10px;font-family:system-ui,sans-serif;color:#000;background:#fff}body{background:#fff}.rt{width:100%;border-collapse:collapse;font-size:12px}.rt th,.rt td{border:1px solid #444;padding:4px 6px;text-align:left}h2{margin:0 0 6px}}
+@media print{body>*:not(#rep){display:none!important}#rep{display:block;padding:10px;font-family:system-ui,sans-serif;color:#000;background:#fff}body{background:#fff}.rt{width:100%;border-collapse:collapse;font-size:12px}.rt th,.rt td{border:1px solid #444;padding:4px 6px;text-align:left}h2{margin:0 0 6px}.tb{margin-top:16px;break-inside:avoid}.th{display:flex;justify-content:space-between;background:#222!important;color:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:6px 8px;font-weight:700;font-size:13px;break-after:avoid}.rt tr{break-inside:avoid}}
 </style></head><body>
 <header><div class="r"><button class="s" onclick="location.href='index.html'">← Menu</button><button id="cl" class="s" style="flex:0 0 58px;padding:8px 0" onclick="cloudBtn()">☁✖</button></div><b style="font-size:17px">Faltantes em vistoria</b> <small style="opacity:.7">v6</small></header>
 <main>
@@ -131,6 +131,9 @@ function printUI(){
  $('#pt').innerHTML=[...new Set(F.recs.map(r=>r.tec))].sort().map(x=>`<option>${esc(x)}</option>`).join('');
  $('#pm').style.display='block';peChange();
 }
+function tecTbl(rows,now){
+ return '<table class="rt"><tr><th>Data/hora</th><th>Item</th><th>Tipo</th><th>Class.</th><th>Qtd</th><th>Situação</th></tr>'+rows.map(({r,i})=>`<tr><td>${fd(r.ts)} ${ftm(r.ts)}</td><td>${esc(i.n)}</td><td>${i.cat}</td><td>${esc(r.cl)}</td><td>${i.q}</td><td>${i.d?'Entregue '+fd(i.d)+' (em '+dur(i.d-r.ts)+')':'Pendente há '+dur(now-r.ts)}</td></tr>`).join('')+`<tr><th colspan="4">Total</th><th>${rows.reduce((a,x)=>a+x.i.q,0)}</th><th></th></tr></table>`;
+}
 function relat(){
  const e=$('#pe').value,t=$('#pt').value,c=$('#pc').value,s=$('#ps').value;
  if(e==='tec'&&!t)return alert('Não há técnico com registro.');
@@ -148,13 +151,15 @@ function relat(){
  let h=`<h2>Faltantes em vistoria - ${esc(T)}</h2><p>Classificação: ${c||'Operação e Ativação'} · Situação: ${{pend:'Pendentes de entrega',ent:'Entregues',todos:'Todas'}[s]} · Emitido em ${fd(now)} ${ftm(now)}</p>`;
  if(e==='tec'){
   rows.sort((a,b)=>a.r.ts-b.r.ts);
-  h+='<table class="rt"><tr><th>Data/hora</th><th>Item</th><th>Tipo</th><th>Class.</th><th>Qtd</th><th>Situação</th></tr>'+rows.map(({r,i})=>`<tr><td>${fd(r.ts)} ${ftm(r.ts)}</td><td>${esc(i.n)}</td><td>${i.cat}</td><td>${esc(r.cl)}</td><td>${i.q}</td><td>${i.d?'Entregue '+fd(i.d)+' (em '+dur(i.d-r.ts)+')':'Pendente há '+dur(now-r.ts)}</td></tr>`).join('')+`<tr><th colspan="4">Total</th><th>${rows.reduce((a,x)=>a+x.i.q,0)}</th><th></th></tr></table>`;
+  h+=tecTbl(rows,now);
  }else{
   const m={};
   for(const {r,i} of rows){const k=i.cat+'|'+i.n;const o=m[k]=m[k]||{n:i.n,cat:i.cat,Operação:0,'Ativação':0,ent:0,tot:0};o[r.cl]+=i.q;o.tot+=i.q;if(i.d)o.ent+=i.q}
   const L=Object.values(m).sort((a,b)=>a.cat.localeCompare(b.cat)||a.n.localeCompare(b.n));
   const cr=c!=='Ativação',ca=c!=='Operação',S2=k=>L.reduce((a,o)=>a+o[k],0);
   h+='<table class="rt"><tr><th>Item</th><th>Tipo</th>'+(cr?'<th>Operação</th>':'')+(ca?'<th>Ativação</th>':'')+'<th>Total</th><th>Entregue</th><th>Falta entregar</th></tr>'+L.map(o=>`<tr><td>${esc(o.n)}</td><td>${o.cat}</td>${cr?`<td>${o.Operação}</td>`:''}${ca?`<td>${o['Ativação']}</td>`:''}<td>${o.tot}</td><td>${o.ent}</td><td>${o.tot-o.ent}</td></tr>`).join('')+`<tr><th colspan="2">Total</th>${cr?`<th>${S2('Operação')}</th>`:''}${ca?`<th>${S2('Ativação')}</th>`:''}<th>${S2('tot')}</th><th>${S2('ent')}</th><th>${S2('tot')-S2('ent')}</th></tr></table>`;
+  const G={};rows.forEach(x=>(G[x.r.tec]=G[x.r.tec]||[]).push(x));
+  h+='<h3 style="margin:20px 0 0">Detalhamento por técnico</h3>'+Object.keys(G).sort((a,b)=>a.localeCompare(b)).map(n=>{const g=G[n].sort((a,b)=>a.r.ts-b.r.ts);return `<div class="tb"><div class="th"><span>Técnico: ${esc(n)}</span><span>${g.length} linha(s) · ${g.reduce((a,x)=>a+x.i.q,0)} unidade(s)</span></div>${tecTbl(g,now)}</div>`}).join('');
  }
  $('#rep').innerHTML=h;$('#pm').style.display='none';setTimeout(()=>window.print(),150);
 }
